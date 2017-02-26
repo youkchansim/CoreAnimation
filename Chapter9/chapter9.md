@@ -3,7 +3,7 @@
 
   * 앞의 두 장에서는 CAAnimation과 그 서브 클래스를 사용하여 구현할 수 있는 다양한 유형의 레이어 애니메이션에 대해 살펴보았다. 애니메이션은 시간이 지남에 따라 발생하는 변화이므로 타이밍은 전체 개념에 결정적이다. 이 장에서는 Core Animation이 시간을 추적하는 방법인 CAMediaTiming 프로토콜을 살펴볼 것이다.
 
-## the CAMediaTiming Protocol
+## The CAMediaTiming Protocol
   * CAMediaTiming Protocol은 애니메이션 중에 시간 경과를 제어하는데 사용되는 속성 모음을 정의한다. CALayer와 CAAniamtion은 모두 이 프로토콜을 따르므로 개별 레이어 및 애니메이션 별로 시간을 제어할 수 있다.
 
 ### Duration and repetition
