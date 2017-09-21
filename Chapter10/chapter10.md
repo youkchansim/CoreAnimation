@@ -207,3 +207,223 @@ func setAngle(angle: CGFloat, handView: UIView, animated: Bool) {
 ```
 
 ## More Complex Animation Curves
+* 단단한 표면에 떨어 뜨린 고무 볼을 생각해보자. 떨어 뜨리며 땅에 닿을때까지 가속되어 여러번 튀고 결국 멈추게 된다. 이것을 그래프로 나타내면 아래와 같다.
+![](Resource/10_5.png)
+
+* 이러한 종류의 효과는 단일 입방 베이지어 곡선으로 표현할 수 없으므로 CAMediaTimingFunction을 사용하여 얻을 수 없다. 이와 같은 효과를 원할 경우 몇가지 옵션이 있다.
+
+* CAKeyframeAnimation을 사용하여 애니메이션을 여러 단계로 나눠서 각각의 고유한 타이밍 기능을 가진 애니메이션을 만들 수 있다.
+* 타이머를 사용하여 직접 애니메이션을 구현하고 각 프레임을 업데이트 할 수 있다.(11장에서 설명)
+
+### Keyframe-Based Easing
+* 키 프레임을 사용하여 바운스를 구현하려면 이퀄라이징 커브(각 바운스의 peak 및 trough)에서 각 significant point의 키 프레임을 생성한 다음 그래프의 해당 세그먼트와 일치하는 easing 함수를 적용해야 한다. 또한 각 키 프레임의 시간 간격을 keyTimes 속성을 사용하여 지정해야한다. 매번 수신 간격이 줄어들어 키 프레임이 균등하게 배치되지 않기 때문이다.
+* 아래 예제는 이러한 접근으로 튀는 공 애니메이션을 구현하기 위한 코드이다.
+
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var ballView: UIImageView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        ballView.image = UIImage(named: "Ball")
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        animate()
+    }
+}
+
+extension ViewController {
+    func animate() {
+        let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.duration = 3.0
+        animation.delegate = self
+        animation.values = [
+            NSValue(cgPoint: CGPoint(x: 120, y: 32)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 268)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 140)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 268)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 220)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 268)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 250)),
+            NSValue(cgPoint: CGPoint(x: 120, y: 268)),
+        ]
+        
+        animation.timingFunctions = [
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut),
+            CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn),
+        ]
+        
+        animation.keyTimes = [0.0, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 1.0]
+        ballView.layer.add(animation, forKey: nil)
+    }
+}
+```
+
+* 이 접근방법은 상당히 잘 동작하지만 키프레임과 키 타임을 계산하는 것은 기본적으로 시행착오이다. 애니메이션의 속성을 변경하면 모든 키 프레임을 다시 계산해야한다. 실제로 유용한 것은 간단한 속성 애니메이션을 임의의 easing 함수가 있는 키 프레임 애니메이션으로 변환하는 메서드를 작성할 수 있는 것이다. 이것을 한번 해보자!
+
+### Automation the Process
+* 위의 예제에서 우리는 애니메이션을 꽤 큰 섹션으로 분할하고 Core Animation의 ease-in 및 ease-out 함수를 사용하여 원하는 커브를 근사화하였다. 그러나 애니메이션을 더 작은 부분으로 분할하려면 직선을 사용하여 모든 종류의 커브를 근사시킬 수 있다.(linear easing) 이를 자동화하려면 두 가지 작업을 수행해야 한다.
+  * 임의의 속성 애니메이션을 여러개의 키 프레임으로 자동으로 분할한다.
+  * 바운스 애니메이션의 프레임을 오프셋하는데 사용할 수 있는 수학 함수로 나타낸다.
+
+* 첫 번째 문제를 해결하려면 Core Animation의 보간 메커니즘을 복제해야한다. 이 알고리즘은 시작과 끝 값을 가져와서 특정 시점에 새 값을 생성하는 알고리즘이다. 간단한 부동 소수점 시작 / 끝 값의 경우 이 공식(시간이 0과 1 사이의 값으로 표준화 되었다고 가정)은 다음과 같다.
+
+  * Value = (EndValue - StartValue) x Time + StartValue
+
+* CGPoint, CGColor 또는 CATransform3D와 같은 더 복잡한 값 유형을 보간하려면 이 함수를 각 개별 요소에 적용하면 된다(즉, CGPoint의 x 및 y 값, CGColor의 빨강, 녹색, 파랑 및 알파 값 또는 CATransform3D에서 개별 매트릭스 좌표). 또한 보간하기 전에 객체 유형의 값을 unbox하는 논리가 필요하고, 나중에 다시 상자에 넣으면 런타임 시 유형을 검사해야 한다.
+* 속성 애니메이션의 시작과 끝 값 사이에 임의의 중간 값을 가져오는 코드가 있으면 애니메이션을 원하는 만큼 많은 개별 ㅣ 프레임으로 분할하고 선형 키 프레임 애니메이션을 생성할 수 있다.
+* 이제 예제를 해보자 !
+* 키 프레임의 수는 60 x 애니메이션 지속시간을 사용하였다. 이는 Core Animation이 초당 60 프레임으로 화면을 렌더링하기 때문에 초당 60 프레임의 키 프레임을 생성하면 애니메이션이 매끄럽다는 것을 보장한다.
+* 이 예제에서는 CGPoint 값을 보간하는 코드만 포함시켰다. 그러나 다른 유형을 처리하기 위해 이 코드를 확장할 수 있는 방법은 코드에서 분명해야한다. 우리가 인식하지 못하는 타입의 대체물로서 애니메이션의 전반부는 fromValue를 반환하고 후반부에서는 toValue를 반환한다.
+
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var ballView: UIImageView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        ballView.image = UIImage(named: "Ball")
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        animate()
+    }
+}
+
+extension ViewController {
+    func interpolate(from: CGFloat, to: CGFloat, time: CGFloat) -> CGFloat {
+        return (to - from) * time + from
+    }
+    
+    func interpolateFromValue(fromValue: Any, toValue: Any, time: CGFloat) -> Any {
+        if let fromPoint = fromValue as? CGPoint, let toPoint = toValue as? CGPoint {
+            let result = CGPoint(x: interpolate(from: fromPoint.x, to: toPoint.x, time: time), y: interpolate(from: fromPoint.y, to: toPoint.y, time: time))
+            return NSValue(cgPoint: result)
+        }
+        
+        return time < 0.5 ? fromValue : toValue
+    }
+    
+    func animate() {
+        let fromValue = NSValue(cgPoint: CGPoint(x: 120, y: 32))
+        let toValue = NSValue(cgPoint: CGPoint(x: 120, y: 268))
+        let duration: CFTimeInterval = 1.0
+        
+        let numFrames = duration * 60
+        var frames: [Any] = []
+        
+        for i in 0..<Int(numFrames) {
+            let time = 1.0 / numFrames * Double(i)
+            frames.append(interpolateFromValue(fromValue: fromValue, toValue: toValue, time: CGFloat(time)))
+        }
+        
+        let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.duration = 3.0
+        animation.values = frames
+        ballView.layer.add(animation, forKey: nil)
+    }
+}
+```
+
+* 위의 것은 효과적이지만 특히 인상적이지는 않다. 지금까지 우리가 실제로 달성한 모든것은 CABasicAnimation의 동작을 선형 easing으로 복제하는 매우 복잡한 방법이다. 그러나 이 접근법의 장점은 이제 우리가 완벽하게 맞춤 제어 기능을 적용할 수 있다는 것을 의미한다. 이것을 어떻게 만들면 될까?
+* Easing 뒤에있는 수학은 중요하지 않지만 다행히도 첫 번째 원칙에서 구현할 필요는 없다.로버트 페너(Robert Penner)는 C언어를 포함한 여러 프로그래밍 언어로 모든 일반적인 Easing function에 대한 공개 도메인 코드 샘플에 대한 링크를 포함하는 Easing function(http://wwww.rebertpenner.com/easing) 전용 웹 페이지를 보유하고 있다. 다음은 ease-in-ease-out function의 예제이다. 쉽게 사용할 수 있는 기능을 구현하는 데는 실제로 여러가지 방법이 있다.
+
+```Swift
+func quadraticEaseInOut(t: CGFloat) -> CGFloat {
+    return t < 0.5 ? (2 * t * t) : (-2 * t * t) + (4 * t) - 1
+}
+    
+func bounceEaseOut(t: CGFloat) -> CGFloat {
+   if t < 4/11.0 {
+            return (121 * t * t)/16.0
+   } else if (t < 8/11.0) {
+        return (363/40.0 * t * t) - (99/10.0 * t) + 17/5.0
+    } else if (t < 9/10.0) {
+        return (4356/361.0 * t * t) - (35442/1805.0 * t) + 16061/1805.0
+    }
+        
+    return (54/5.0 * t * t) - (513/25.0 * t) + 268/25.0;
+}
+```
+
+* 위의 코드를 수정하여 bounceEaseOut 함수를 포함하면 우리의 작업이 완료된다. easing 함수를 바꾸는 것만으로 이제 우리가 선택한 easing 유형으로 애니메이션을 만들 수 있다.
+
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var ballView: UIImageView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        ballView.image = UIImage(named: "Ball")
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        animate()
+    }
+}
+
+extension ViewController {
+    func interpolate(from: CGFloat, to: CGFloat, time: CGFloat) -> CGFloat {
+        return (to - from) * time + from
+    }
+    
+    func interpolateFromValue(fromValue: Any, toValue: Any, time: CGFloat) -> Any {
+        if let fromPoint = fromValue as? CGPoint, let toPoint = toValue as? CGPoint {
+            let result = CGPoint(x: interpolate(from: fromPoint.x, to: toPoint.x, time: time), y: interpolate(from: fromPoint.y, to: toPoint.y, time: time))
+            return NSValue(cgPoint: result)
+        }
+        
+        return time < 0.5 ? fromValue : toValue
+    }
+    
+    func quadraticEaseInOut(t: CGFloat) -> CGFloat {
+        return t < 0.5 ? (2 * t * t) : (-2 * t * t) + (4 * t) - 1
+    }
+    
+    func bounceEaseOut(t: CGFloat) -> CGFloat {
+        if t < 4 / 11.0 {
+            return (121 * t * t) / 16.0
+        } else if (t < 8 / 11.0) {
+            return (363 / 40.0 * t * t) - (99 / 10.0 * t) + 17 / 5.0
+        } else if (t < 9/10.0) {
+            return (4356 / 361.0 * t * t) - (35442 / 1805.0 * t) + 16061 / 1805.0
+        }
+        
+        return (54 / 5.0 * t * t) - (513 / 25.0 * t) + 268 / 25.0;
+    }
+    
+    func animate() {
+        let fromValue = NSValue(cgPoint: CGPoint(x: 120, y: 32))
+        let toValue = NSValue(cgPoint: CGPoint(x: 120, y: 268))
+        let duration: CFTimeInterval = 1.0
+        
+        let numFrames = duration * 60
+        var frames: [Any] = []
+        
+        for i in 0..<Int(numFrames) {
+            var time = CGFloat(1.0 / numFrames * Double(i))
+            
+            time = bounceEaseOut(t: CGFloat(time))
+            
+            frames.append(interpolateFromValue(fromValue: fromValue, toValue: toValue, time: time))
+        }
+        
+        let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.duration = 3.0
+        animation.values = frames
+        ballView.layer.add(animation, forKey: nil)
+    }
+}
+```
+
+## Summary
+* 이 장에서는 `Easing`에 대해서 배웠고, CAMediaTimingFunction 클래스를 사용하여 애니메이션을 미세 조정할 수 있는 사용자 정의 Easing function을 만들었다. 또한 CAKeyframeAnimation을 사용하여 CAMediaTimingFunction의 한계를 우회하고 자신만의 완벽한 Easing function을 만드는 방법을 배웠다. 다음 장에서는 타이머 기반 애니메이션을 살펴볼 것이다. 이 애니메이션은 더 많은 제어를 제공하고 애니메이션을 즉각적으로 조작할 수 있게 해주는 애니메이션에 대한 대안 방법이다.
