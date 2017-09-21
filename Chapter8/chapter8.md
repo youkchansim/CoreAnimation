@@ -108,3 +108,148 @@ extension ViewController {
 ```
 * 위와같은 구현은 byValue가 아닌 toValue를 사용하여 애니메이션을 처리하는 것이 일반적인 솔루션의 좋은 예이다. 보다 편리하고 재사용 할 수 있도록 CALayer의 카테고리 메소드로 패키지화 할 수 있다.
 * 이러한 모든 문제는 겉으로 보기에는 단순한 문제를 해결하는 데 많은 어려움이 될 수 있지만 해결방안은 상당히 복잡하다. 애니메이션을 시작하기 전에 대상 속성을 업데이트 하지 않으면 애니메이션이 완전히 완료될 때 까지 대상 속성을 업데이트 할 수 없거나 진행중인 CABasicAnimation을 취소된다.
+
+### CAAnimationDelegate
+* 7장에서 암시적 애니메이션을 사용할 때 우리는 CATransaction 완료 블록을 사용하여 애니메이션이 끝난 시점을 탐지할 수 있었다. 그러나 애니메이션이 트랜잭션과 연관되어 있지 않으므로 명시적 애니메이션을 사용하는 경우에 이 방법을 사용할 수 없다. 명시적 애니메이션이 끝난시기를 확인하려면 CAAnimationDelegate 프로토콜을 준수하는 클래스의 애니메이션 Delegate 속성을 사용해야한다.
+* 새 트랜잭션을 설정하고 속성을 업데이트 할 때 레이어 액션을 비활성화해야한다. 그렇지 않으면 명시적인 CABasicAnimation 때문에 애니메이션이 두 번 발생하고 그 속성에 대한 암시적 애니메이션 작업으로 인해 애니메이션이 다시 발생한다.
+
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var layerView: UIView!
+    
+    let layer = CALayer()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        layer.frame = CGRect(x: 50, y: 50, width: 100, height: 100)
+        layer.backgroundColor = UIColor.blue.cgColor
+        
+        layerView.layer.addSublayer(layer)
+    }
+}
+
+extension ViewController {
+    func changeColor() {
+        let red = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        let green = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        let blue = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        let color = UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+        
+        let animation = CABasicAnimation(keyPath: "backgroundColor")
+        animation.toValue = color.cgColor
+        animation.delegate = self
+        layer.add(animation, forKey: nil)
+    }
+}
+
+extension ViewController: CAAnimationDelegate {
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if let animation = anim as? CABasicAnimation {
+            layer.backgroundColor = animation.toValue as! CGColor?
+        }
+        CATransaction.commit()
+    }
+}
+```
+
+* 완료 블록 대신 델리게이트 패턴을 사용하는 CAAnimation의 문제점은 추적할 여러 애니메이션 또는 애니메이션 레이어가 있을 때 매우 어렵다. 뷰컨트롤러에서 애니메이션을 생성할 때 컨트롤러를 애니메이션 위임자로 사용하지만 모든 애니메이션이 동일한 델리게이트 메서드를 호출하므로 어떤 완료 호출을 결정해야할지 방법이 필요하다.
+* 3장 `Layer Geometry`의 시계를 고려했을 때 원래 매초마다 초침의 각도를 업데이트함으로써 애니메이션 없이 시계를 구현했다. 암시적 애니메이션을 사용하여 초침을 애니메이트 할 수 없다. 그 이유는 초침이 UIView 인스턴스에 의해 표현되고 암시적 애니메이션이 비활성화되어 있기 때문이다.
+* 그렇다면 어떻게 애니메이션의 어떤 뷰가 완료되었다는 것을 알 수 있을까?
+* 간단하다. CAAnimation은 KVC 프로토콜을 준수하기 때문에 setValue:, forKey 및 valueForKey 메소드를 사용하여 키에 value를 맵핑하면된다.
+```Swift
+...
+
+func setAngle(angle: CGFloat, handView: UIView, animated: Bool) {
+    let transform = CATransform3DMakeRotation(angle, 0, 0, 1)
+
+    if animated {
+        let animation = CABasicAnimation(keyPath: "transform")
+        animation.toValue = NSValue(caTransform3D: transform)
+        animation.duration = 0.5
+        animation.delegate = self
+        animation.setValue(handView, forKey: "handView")
+        hanView.layer.add(animation, forKey: nil)
+    } else {
+        hanView.layer.transform = transform
+    }
+}
+
+extension ViewController: CAAnimationDelegate {
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        let view = anim.valueForKey("handView")
+        if let animation = anim as? CABasicAnimation {
+            view.layer.transform = animation.toValue.caTransform3DValue
+        }
+    }
+}
+
+...
+```
+* 위의 방법으로 애니메이션이 끝나고 올바른 값으로 변형된것을 확인했다. 하지만 이러한 조치를 취한 후에도 또 다른 문제가 있다. 시뮬레이터에선 잘되지만 실제 디바이스에서 animationDidStop가 호출되기 이전에 시계 바늘이 잠시 원래 값으로 돌아오는 것을 볼 수 있다.
+* 문제는 애니메이션이 끝난 후에 콜백 메서드가 호출 되더라도 애니메이션 속성이 전 상태로 리셋되기 전에 호출된다는 보장이 없다. 이것은 시뮬레이터 뿐 만 아니라 장치에서 항상 애니메이션 코드를 테스트해야하는 이유의 좋은 예이다.
+* `fillMode`라는 속성을 사용하여 이 문제를 해결할 수 있다. 이는 다음장에서 살펴볼 것이다.
+
+### Keyframe Animations
+* CABasicAnimation은 iOS의 암시적 애니메이션 대부분에 숨어있는 기본 메커니즘을 보여주지만 CABasicAnimation을 명시적으로 레이어에 추가하는것은 동일한 효과를 얻을 수 있는 더 간단한 방법이 있을 때 약간의 이점이 있다. 그러나 CAKeyframeAnimation은 상당히 강력하고 UIKit에 노출된 인터페이스가 없다.
+* CAkeyframeAnimation은 CAPropertyAnimation의 하위 클래스인 CABasicAnimation과 같다. 하나의 속성에서 계속 작동하지만 CABasicAnimation과 달리 단 하나의 시작 및 끝 값에만 국한되지 않고 사이에 애니메이션을 적용할 임의의 시퀀스 값을 제공할 수 있다.
+```Swift
+let keyframeAnimation = CAKeyframeAnimation(keyPath: "backgroundColor")
+        keyframeAnimation.duration = 2.0
+        keyframeAnimation.values = [
+            UIColor.blue.cgColor,
+            UIColor.red.cgColor,
+            UIColor.green.cgColor,
+            UIColor.blue.cgColor,
+        ]
+        layer.add(keyframeAnimation, forKey: nil)
+```
+* 위에서 시퀀스의 시작과 끝 색상을 파란색으로 지정했다. 이는 CAKeyframeAnimation이 자동으로 현재 값을 첫 번째 프레임으로 사용하는 옵션을 가지고 있지 않기 때문에 필요하다.(CABasicAnimation에서 fromValue를 nil로 남겨두었던것처럼). 애니메이션은 시작 시 첫 번째 키 프레임 값으로 바로 이동하고 완료되면 즉시 원래 속성 값으로 되돌아간다. 따라서 부드러운 애니메이션의 경우 시작 및 끝 키 프레임을 동일한 값으로 일치시킨다.
+* `duration`을 0.2초에서 2초로 변경하였는데 그 이유는 시퀀스를 순회할 때 동일한 시간을 두고 애니메이션이 적용되기 때문에 정말 이상하게 보이기 때문이다. 이를 더 자연스럽게 보이게 하려면 10장에서 배울것이다.
+* CAKeyframeAnimation은 CGPath를 사용하여 애니메이션을 지정하는 다른 방법이 있다. path 속성을 사용하면 Core Graphics 함수를 사용하여 애니메이션을 그리는 방식으로 직관적인 시퀀스 동작을 정의할 수 있다.
+* 이를 위해 예제 한가지를 해 볼 것이다.
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var bezierCurveView: UIView!
+    
+    let layer = CALayer()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 0, y: 75))
+        path.addCurve(to: CGPoint(x: 300, y: 75), controlPoint1: CGPoint(x: 75, y: 0), controlPoint2: CGPoint(x: 225, y: 150))
+        
+        let pathLayer = CAShapeLayer()
+        pathLayer.path = path.cgPath
+        pathLayer.fillColor = UIColor.clear.cgColor
+        pathLayer.strokeColor = UIColor.red.cgColor
+        pathLayer.lineWidth = 3.0
+        bezierCurveView.layer.addSublayer(pathLayer)
+        
+        let shipLayer = CALayer()
+        shipLayer.frame = CGRect(x: 0, y: 0, width: 64, height: 64)
+        shipLayer.position = CGPoint(x: 0, y: 75)
+        shipLayer.contents = UIImage(named: "Ship")?.cgImage
+        bezierCurveView.layer.addSublayer(shipLayer)
+        
+        let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.duration = 4.0
+        animation.path = path.cgPath
+        shipLayer.add(animation, forKey: nil)
+    }
+}
+```
+![](Resource/8_1.png)
+
+* 예제를 실행하면 우주선의 애니메이션이 약간 비현실적으로 보일 수 있다. 왜냐면 곡선의 탄제트와 일치하도록 움직이기 보다는 항상 오른쪽만 직접 가리키기 때문이다. 우주선의 affineTransform을 조정하여 움직이는 방향으로 애니메이션을 만들 수 있지만 다른 애니메이션과 동기화하는 것은 까다로울 수 있다.
+* 다행히도 Apple은 이 시나리오를 예상하고 rotationMode라는 CAKeyframeAnimation에 속성을 추가했다. rotationMode를 상수값 kCAAnimationRotateAuto로 설정하면 레이어는 애니메이션이 적용될 때 곡선의 탄젠트를 따라 자동으로 회전한다.
+```Swift
+let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.duration = 4.0
+        animation.path = path.cgPath
+        animation.rotationMode = kCAAnimationRotateAuto
+        shipLayer.add(animation, forKey: nil)
+```
+![](Resource/8_2.png)
