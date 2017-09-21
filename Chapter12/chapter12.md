@@ -103,3 +103,124 @@
 ### OpenGL ES Driver
 * OpenGL ES 드라이버 도구는 GPU 활용도를 측정하는 데 도움을 줄 수 있다. 이는 애니메이션 성능이 GPU 바인딩인지 여부를 나타내는 좋은 지표이다. 또한 Core Animation 도구와 동일한 FPS 디스플레이를 제공한다.
 ![](Resource/12_5.png)
+
+* 오른쪽 사이드 바에 여러가지 유용한 측정 항목이 있다. 이 중 Core Animation 성능과 가장 관련이 있는 것은 다음과 같다.
+  * Renderer Utilization - 이 값이 50%보다 높으면 과도한 블렌딩으로 인한 오프 스크린 렌더링 또는 오버 드로로 인해 애니메이션의 fill-rate가 제한됨을 나타낸다.
+  * Tiler Utilization - 이 값이 50%보다 높으면 애니메이션이 geometry에 제한적이어서 화면 상에 너무 많은 레이어가 있을 수 있음을 나타낸다.
+
+## A Worked Example
+* 이제 Instruments의 애니메이션 성능 도구에 익숙해 졌으므로 이를 사용하여 실제 성능 문제를 진단하고 해결해보자.
+* 모의 연락처 목록을 표시하는 간단한 앱을 만든다. 아바타 이미지가 앱 번들에 저장되어 있어도 앱이 더 사실적으로 작동하도록 하기 위해 실제 아바타 이미지를 개별적으로 로드한다.
+
+![](Resource/12_6.png)
+
+```Swift
+struct SampleModel {
+    var name: String
+    var image: UIImage
+}
+
+class ViewController_12_1: UIViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    var items: [SampleModel] = []
+    
+    var firstName = ["Alice", "Bob", "Charles", "Dan", "Dave", "Ethan", "Frank", "육"]
+    var lastName = ["Appleseed", "Bandicoot", "Caravan", "Dabble", "Ernest", "Fortune", "찬심"]
+    var images = [#imageLiteral(resourceName: "Snowman"), #imageLiteral(resourceName: "Igloo"), #imageLiteral(resourceName: "Cone"), #imageLiteral(resourceName: "Spaceship"), #imageLiteral(resourceName: "Anchor"), #imageLiteral(resourceName: "Key")]
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        tableView.dataSource = self
+        
+        items = (1...1000).map { _ in
+            generateRandomModel()
+        }
+    }
+}
+
+extension ViewController_12_1 {
+    func generateRandomModel() -> SampleModel {
+        return SampleModel(name: generateRandomName(), image: generateRandomImage())
+    }
+    
+    private func generateRandomName() -> String {
+        let firstIndex = Int(arc4random()) % firstName.count
+        let lastIndex = Int(arc4random()) % lastName.count
+        
+        return "\(firstName[firstIndex]) \(lastName[lastIndex])"
+    }
+    
+    private func generateRandomImage() -> UIImage {
+        let index = Int(arc4random()) % images.count
+        return images[index]
+    }
+}
+
+extension ViewController_12_1: UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return items.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "TableViewCell_12", for: indexPath) as? TableViewCell_12 else {
+            return UITableViewCell()
+        }
+        
+        let item = items[indexPath.row]
+        cell.imageV.image = item.image
+        cell.textL.text = item.name
+        
+        cell.imageV.layer.shadowOffset = CGSize(width: 0, height: 5)
+        cell.imageV.layer.shadowOpacity = 0.75
+        cell.clipsToBounds = true
+        
+        cell.textL.backgroundColor = .clear
+        cell.textL.layer.shadowOffset = CGSize(width: 0, height: 2)
+        cell.textL.layer.shadowOpacity = 0.5
+        
+        return cell
+    }
+}
+```
+
+* 직관적으로 병목 현상은 이미지 로딩이라고 가정할 수 있다. 플래시 드라이브의 이미지를 실시간으로 로드하고 캐싱하지 않기 때문에 속도가 느린 것 같습니다. 우리는 GCD를 사용하여 이미지를 비동기식으로 로드하고 캐시를 사용하여 추측할 수 있는 멋진 코드로 해결할 수 있다.
+* Stop, Wait
+* 코드 작성을 시작하기 전에 가설을 테스트해보자. 3가지 인스트루먼트 도구를 사용하여 앱을 프로파일링 하여 문제를 확인한다. 문제가 이미지 로딩과 관련이 있다고 생각하기 때문에 Time Profiler 도구로 시작해보자.
+
+![](Resource/12_7.png)
+
+* tableView: cellorRowAtIndexPath 메소드(아바타 이미지를 로드하는 곳)에서 소비한 총 CPU 시간의 비율은 ~15%에 불과하다. 그것은 그다지 높지 않다. 이것은 CPU / IO가 여기에 제한적인 요소가 아니라는 것을 암시한다. 대신 GPU 문제인지 확인해 보자. OpenGL ES Driver 도구에서 GPU 사용률을 확인한다.
+
+![](Resource/12_8.png)
+
+* 지금은 OpenGL ES Driver가 아닌 GPU Driver로 사용하여 측정해야 한다. GPU가 꾀 무거워 하는걸 볼 수 있다. Deivce Utilization %, Renderer Utilization %를 보면 각각 52, 42이다.
+* 먼저 Color Blended를 사용해보자.
+
+![](Resource/12_9.png)
+
+* 화면의 빨간색 부분은 텍스트 레이블에 높은 수준의 블렌딩을 나타낸다. 그림자 효과를 적용하려면 배경을 투명하게 해야했기 때문에 놀라운 일은 아니다. 이는 렌더러 사용률이 높은 이유를 설명한다.
+* 오프 스크린 드로잉은 어떨까? Core Animation 도구의 Color Offscreen-Rendered Yellow 옵션을 활성화한다.
+
+![](Resource/12_10.png)
+
+* 우리는 지금 테이블 셀이 렌더 되는 중인 offscreen을 보고 있다. 이미지와 레이블 뷰에 적용한 그림자 때문이다. 코드에서 주석을 달아 그림자를 비활성화 하고 성능 문제에 도음이 되는지 확인해보자.
+
+![](Resource/12_11.png)
+
+* 문제가 해결 되었다. 노란색이 사라졌지만 상태바에는 남아있다... 그림자가 없으면 매끄러운 스크롤을 할 수 있다. 하지만 우리의 연락처 목록은 이전과 같이 재미있지 않다. 우리는 어떻게 레이어 그림자를 유지하면서도 여전히 우수한 성능을 유지할 수 있을까?
+* 음.. 각 행에 대한 텍스트와 아바타는 모든 프레임을 변경할 필요가 없으므로 UITableViewCell 레이어가 캐싱을 위한 훌륭한 후보자 인것처럼 보인다. shouldRasterize 속성을 사용하여 레이어 내용을 캐시할 수 있다. 이렇게 하면 레이어를 한 번 화면 밖으로 렌더링 한 다음 업데이트해야할 때까지 결과를 유지한다. 이것을 해보자!
+
+```Swift
+cell.layer.shouldRasterize = true
+cell.layer.rasterizationScale = UIScreen.main.scale
+```
+* 위 코드를 추가 후 실행하여 Core Animation 도구의 Color Hits Green 및 Misses Red 옵션을 사용하여 캐싱이 올바르게 작동하는지 확인할 수 있다. 여전히 레이어 내용을 스크린 밖에 그리기는 하지만 래스터화를 명시적으로 활성화 했기 때문에 Core Animation은 그 그림의 결과를 캐싱하고 잇으므로 성능에 미치는 영향은 적다.
+
+![](Resource/12_12.png)
+
+* 예상대로 대부분의 행은 초록색으로 화면 위로 이동하면서 잠깐 빨간색으로 깜빡인다. 결과적으로 우리 프레임 속도가 훨씬 더 부드러워졌다. 그래서 우리의 초기 직관은 잘못되었다. 결국 우리의 이미지 로딩은 결국 병목현상이 발생되지 않고 복잡한 다중 스레드 로딩 및 캐싱 구현에 투입되는 모든 노력을 낭비하게 된다. 문제 해결을 하기 전에 문제가 무엇인지부터 확인해야했다.
+
+## Summary
+* 이 장에서는 Core Animation 렌더링 파이프 라인의 작동 방식과 병목 현상이 발생할 가능성이 있는 위치에 대해 배웠다. 또한 Instruments를 사용하여 성능 문제를 진단하고 수정하는 방법을 배웠다.
