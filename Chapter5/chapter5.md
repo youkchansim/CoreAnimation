@@ -354,9 +354,7 @@ perspective = CATransform3DRotate(perspective, CGFloat(-M_PI_4), 0, 1, 0)
 - 동적 조명효과를 만들어야 하는 경우 보기 방향에 따라 다양한 알파를 사용하여 반투명 검정색 섀도우 레이어로 각 뷰를 겹쳐서 표시할 수 있다.
 - 그림자 레이어의 불투명도를 계산하려면 각 면의 법선 벡터(표번에 수직인 벡터)를 가져와 가상의 광원에서 벡터와 벡터간의 외적을 계산해야 한다.
 - 조명효과를 내기 위해서 GLKit 프레임 워크를 사용했다.
-
 ![](Resource/5_22.png)
-
 ```Swift
 class SolidObjectViewController: UIViewController {
     @IBOutlet var faces: [UIView]!
