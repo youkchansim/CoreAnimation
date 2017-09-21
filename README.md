@@ -11,3 +11,5 @@
 [5. Transform](Chapter5/chapter5.md)
 
 [7. Implicit Animations](Chapter7/chapter7.md)
+
+[8. Explicit Animations](Chapter8/chapter8.md)
