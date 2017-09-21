@@ -10,6 +10,8 @@
 
 [5. Transform](Chapter5/chapter5.md)
 
+[6. Specialized Layer](Chapter6/chapter6.md)
+
 [7. Implicit Animations](Chapter7/chapter7.md)
 
 [8. Explicit Animations](Chapter8/chapter8.md)
