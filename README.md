@@ -25,3 +25,5 @@
 [12. Tuning for Speed](Chapter12/chapter12.md)
 
 [13. Efficient Drawing](Chapter13/chapter13.md)
+
+[14. Image IO](Chapter14/chapter14.md)
