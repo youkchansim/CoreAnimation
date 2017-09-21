@@ -63,10 +63,6 @@ extension ViewController_14_1: UICollectionViewDataSource {
 * 셀은 UICollectionView에서 재활용되므로 이미지를 로드하는 동안 셀이 다른 인덱스로 재사용되지 않았는지 확인할 수 없습니다. 이미지가 잘못된 셀에 로드되는 것을 방지하기 위해 로드 전에 셀에 인덱스로 태그를 지정하고 이미지를 설정하기 전에 태그가 변경되지 않았는지 확인한다.
 
 ```Swift
-class CollectionViewCell_14_2: UICollectionViewCell {
-    @IBOutlet weak var imageView: UIImageView!
-}
-
 class ViewController_14_2: UIViewController {
     @IBOutlet weak var collectionView: UICollectionView!
     
@@ -75,21 +71,7 @@ class ViewController_14_2: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let images = [
-            "0150",
-            "0154",
-            "0163",
-            "0169",
-            "0170",
-            "0173",
-            "0174",
-            "0180",
-            "0181",
-            "0184",
-            "0197",
-        ]
-        
-        imagePaths = images.map { "IMG_" + $0 + ".png" }
+        imagePaths = Bundle.main.paths(forResourcesOfType: "png", inDirectory: "Vacation Photos")
     }
 }
 
@@ -111,7 +93,7 @@ extension ViewController_14_2: UICollectionViewDataSource {
         DispatchQueue.global().async {
             let index = indexPath.row
             let imagePath = self.imagePaths[index]
-            let image = UIImage(named: imagePath)
+            let image = UIImage(contentsOfFile: imagePath)
             
             DispatchQueue.main.async {
                 if index == cell.tag {
@@ -170,21 +152,7 @@ class ViewController_14_3: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let images = [
-            "0150",
-            "0154",
-            "0163",
-            "0169",
-            "0170",
-            "0173",
-            "0174",
-            "0180",
-            "0181",
-            "0184",
-            "0197",
-            ]
-        
-        imagePaths = images.map { "IMG_" + $0 + ".png" }
+        imagePaths = Bundle.main.paths(forResourcesOfType: "png", inDirectory: "Vacation Photos")
     }
 }
 
@@ -206,7 +174,7 @@ extension ViewController_14_3: UICollectionViewDataSource {
         DispatchQueue.global().async {
             let index = indexPath.row
             let imagePath = self.imagePaths[index]
-            var image = UIImage(named: imagePath)
+            var image = UIImage(contentsOfFile: imagePath)
             
             UIGraphicsBeginImageContextWithOptions(cell.imageView.bounds.size, true, 0)
             image?.draw(in: cell.imageView.bounds)
@@ -223,6 +191,7 @@ extension ViewController_14_3: UICollectionViewDataSource {
         return cell
     }
 }
+
 ```
 
 ### CATiledLayer
@@ -245,21 +214,7 @@ class ViewController_14_4: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let images = [
-            "0150",
-            "0154",
-            "0163",
-            "0169",
-            "0170",
-            "0173",
-            "0174",
-            "0180",
-            "0181",
-            "0184",
-            "0197",
-            ]
-        
-        imagePaths = images.map { "IMG_" + $0 + ".png" }
+        imagePaths = Bundle.main.paths(forResourcesOfType: "png", inDirectory: "Vacation Photos")
     }
 }
 
@@ -294,7 +249,7 @@ extension ViewController_14_4: CALayerDelegate {
     func draw(_ layer: CALayer, in ctx: CGContext) {
         let index = layer.value(forKey: "index") as? Int ?? 0
         let imagePath = imagePaths[index]
-        let tileImage = UIImage(named: imagePath) ?? UIImage()
+        let tileImage = UIImage(contentsOfFile: imagePath) ?? UIImage()
         
         let aspectRatio = tileImage.size.height / tileImage.size.width
         var imageRect = CGRect.zero
@@ -377,21 +332,7 @@ class ViewController_14_5: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let images = [
-            "0150",
-            "0154",
-            "0163",
-            "0169",
-            "0170",
-            "0173",
-            "0174",
-            "0180",
-            "0181",
-            "0184",
-            "0197",
-            ]
-        
-        imagePaths = images.map { "IMG_" + $0 + ".png" }
+        imagePaths = Bundle.main.paths(forResourcesOfType: "png", inDirectory: "Vacation Photos")
     }
 }
 
@@ -406,7 +347,7 @@ extension ViewController_14_5 {
         
         DispatchQueue.global().async {
             let imagePath = self.imagePaths[index]
-            var image = UIImage(named: imagePath) ?? UIImage()
+            var image = UIImage(contentsOfFile: imagePath) ?? UIImage()
             
             UIGraphicsBeginImageContextWithOptions(image.size, true, 0)
             image.draw(at: CGPoint.zero)
