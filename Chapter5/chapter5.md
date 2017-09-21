@@ -81,7 +81,7 @@ class ViewController: UIViewController {
 
 ### The Shear Transform
 - Core Graphoics는 변환 매트릭스의 올바른 값을 계산하는 함수를 제공하기 때문에 CGAffineTransform의 필드를 직접 설정해야 하는 경우는 거의 없다.
-하지만 변경해야 할 상황 중 하나는 Core Graphics이 내장 기능을 제공하지 않는 전단 변환을 만들려는 경우이다.
+하지만 변경해야 할 상황 중 하나는 Core Graphics가 내장 기능을 제공하지 않는 전단 변환을 만들려는 경우이다.
 ![](Resource/5_5.png)
 ```Swift
 class ViewController: UIViewController {
@@ -134,8 +134,7 @@ class ViewController: UIViewController {
     }
 }
 ```
-- 전혀 회전한것처럼 보이지 않는다. 단지 얇아진것처럼만 보인다. 하지만 실제로 위의 에제는 회전을 적용한 것이다. 단순히 원근감이 빠졌기 때문이다.
-
+- 전혀 회전한것처럼 보이지 않는다. 단지 얇아진것처럼만 보인다. 하지만 실제로 위의 에제는 회전을 적용한 것이다. 이유는 단순히 원근감이 빠졌기 때문이다.
 ### Perspective Projection
 - 위와 같은 문제를 해결하기 위해서는 원근감 변환(z 변환이라고도 불림)을 포함하도록 변환행렬을 수정해야한다.
 원근감 변환을 설정하는 함수를 제공하지 않으므로 매트릭스의 값을 수동으로 수정해야 한다. 어려워 보이지만 실제로는 간단하다.
