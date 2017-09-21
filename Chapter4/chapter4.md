@@ -17,7 +17,7 @@ iOS에서 기본 그림자 효과는 위로 되어있는데 이는 CoreAnimation
 
 ### Shadow Clipping
 - 레이어의 그림자는 bounds 및 cornerRadius 뿐 만 아니라 컨텐츠와 똑같은 모양도 가능하다. 하지만 레이어의 masksToBounds가 true일 경우 그림자도 잘리므로 주의해야한다.
-- #### Shadow Path
+- Shadow Path
   - 그림자의 모양이 무엇인지 알 고 있다면 CGPath로 그림자 모양을 지정할 수 있다.
 
 ### Layer Masking
