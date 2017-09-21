@@ -8,4 +8,6 @@
 
 [4. Visual Effects](Chapter4/chapter4.md)
 
+[5. Transform](Chapter5/chapter5.md)
+
 [7. Implicit Animations](Chapter7/chapter7.md)
