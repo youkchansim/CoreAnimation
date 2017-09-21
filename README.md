@@ -21,3 +21,5 @@
 [10. Easing](Chapter10/chapter10.md)
 
 [11. Timer-Based Animation](Chapter11/chapter11.md)
+
+[12. Tuning for Speed](Chapter12/chapter12.md)
