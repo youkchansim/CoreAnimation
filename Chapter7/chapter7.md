@@ -132,7 +132,7 @@ class ViewController: UIViewController {
 - 암시적인 애니메이션을 비활성화하는 유일한 방법은 액션에 대한 nil을 반환하는 것이 아니라 setDisableActions라는 메서드를 통해 암시적 애니메이션을 동시에 활성화하거나 비활성화 할 수 있다.
 - 위를 요악하면 아래와 같은것을 배웠다.
   1. UIView 지원 레이어에는 암시적 애니메이션이 활성화되어 있지 않으며, Backing 레이어의 속성을 애니메이션으로 만드는 유일한 방법은
-  CATransaction에 의존하는 대신 UIView 애니메이션 메서드를 사용하는 것이다. 그리고 UIVIew 자체를 하위 클래스로 만들고 actionForLayer 메서드를 재정의 하거나 명시적 애니메이션(8장)을 마드는 것이다.
+  CATransaction에 의존하는 대신 UIView 애니메이션 메서드를 사용하는 것이다. 그리고 UIVIew 자체를 하위 클래스로 만들고 actionForLayer 메서드를 재정의 하거나 명시적 애니메이션(8장)을 드는 것이다.
   2. 호스팅 된 레이어의 경우 actionForLayer Delegate 메서드를 구현하거나 Action Dictionary를 제공하여 암시적 속성 애니메이션에 대해 선택된 애니메이션을 제어할 수 있다.
   Action은 대게 코어 애니메이션이 필요할 때 암묵적으로 호출되는 명시적 애니메이션 객체를 사용하여 지정된다. 여기에서 사용하고 있는 애니메이션은 CATransition의 인스턴스로 구현된다.
 
