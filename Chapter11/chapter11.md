@@ -206,7 +206,7 @@ extension ViewController {
   * UITrackingRunLoopMode - UIScrollView 및 기타 컨트롤 애니메이션을 적용하는데 사용된다.
 
 * 이 예제에서는 NSDefaultRunLoopMode를 사용했지만 애니메이션이 원활하게 실행되도록 NSRunLoopCommonModes를 대신 사용할 수 있다. 이 모드를 사용할 경우 애니메이션이 높은 프레임 속도로 실행될 때 주의해야한다. 왜냐하면 타이머와 같은 다른 작업 또는 스크롤과 같은 다른 iOS 애니메이션은 애니메이션이 끝날 때 까지 업데이트를 중지하기 때문이다.
-* CADisplayLink는 동시에 여러개 사용이 가능마흐로 NSDefaultRunLoopMode 및 UITrackingRunLoopMode에 추가하여 다른 UIKit 컨트롤 애니메이션의 성능을 방해하지 않으면서 스크롤이 중단되지 않도록 할 수 있다.
+* CADisplayLink는 동시에 여러개 사용이 가능하므로 NSDefaultRunLoopMode 및 UITrackingRunLoopMode에 추가하여 다른 UIKit 컨트롤 애니메이션의 성능을 방해하지 않으면서 스크롤이 중단되지 않도록 할 수 있다.
 ```Swift
 timer = CADisplayLink(target: self, selector: #selector(step))
 timer?.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
@@ -432,3 +432,4 @@ cpSpaceEachShape(self.space, &updateShape, NULL); }
 * 그러나 우리는 수백 개의 객체가 상호 작용하는보다 복잡한 장면을 가지고 있다고 가정한다. 물리 계산은 더욱 복잡해지고 cpSpaceStep ()은 실제로 완료하는 데 1 / 120 초 이상 걸릴 수 있다. 우리는 물리 단계의 시간을 측정하지 않다. 왜냐하면 우리는 프레임 업데이트와 비교하면 사소한 것으로 가정하기 때문에 시뮬레이션 단계가 시뮬레이션하는 시간보다 오래 걸리면 프레임 업데이트가 지연 될 것이다.
 * 그것은 더 악화된다 : 프레임이 업데이트하는 데 더 오랜 시간이 걸리는 경우, 시뮬레이션은 시뮬레이션 된 시간을 실시간으로 동기화하기 위해 더 많은 단계를 수행해야한다. 그런 다음 추가 단계를 수행하면 프레임 업데이트가 계속 지연된다. 결과적으로 응용 프로그램이 효과적으로 정지 될 때까지 프레임 속도가 느려지고 느려지므로이를 죽음의 나선형이라고한다.
 주어진 장치에서 실제 단계를 측정하고 고정 된 시간 단계를 자동으로 조정하는 코드를 추가 할 수 있지만 실제로는 과도한 것일 수 있다. 지원할 가장 느린 장치에 대해 오류와 테스트를 위해 충분한 여유를 두십시오. 물리 계산이 시뮬레이션 된 시간의 50 % 이상을 차지하는 경우 시뮬레이션 시간 단계를 늘리거나 장면을 단순화하는 것을 고려하십시오. 시뮬레이션 시간 간격이 1/60 초 (전체 화면 프레임 업데이트)가 소요되는 시점까지 증가하면 CADisplayLink frameInterval을 증가시켜 애니메이션 프레임 속도를 초당 30 프레임 이하로 줄여야합니다. 무작위로 프레임을 건너 뛰기 시작하지 않으면 애니메이션 모양이 흐려진다.
+
