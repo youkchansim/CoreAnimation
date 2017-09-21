@@ -195,7 +195,7 @@ extension ViewController_12_1: UITableViewDataSource {
 
 ![](Resource/12_8.png)
 
-* 지금은 OpenGL ES Driver가 아닌 GPU Driver로 사용하여 측정해야 한다. GPU가 꾀 무거워 하는걸 볼 수 있다. Deivce Utilization %, Renderer Utilization %를 보면 각각 52, 42이다.
+* 지금은 OpenGL ES Driver가 아닌 GPU Driver로 사용하여 측정해야 한다. GPU가 꾀 무거워 하는걸 볼 수 있다. Deivce Utilization %, Renderer Utilization %를 보면 각각 46, 30이다.
 * 먼저 Color Blended를 사용해보자.
 
 ![](Resource/12_9.png)
