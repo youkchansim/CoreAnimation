@@ -27,3 +27,5 @@
 [13. Efficient Drawing](Chapter13/chapter13.md)
 
 [14. Image IO](Chapter14/chapter14.md)
+
+[15. Layer performance](Chapter15/chapter15.md)
