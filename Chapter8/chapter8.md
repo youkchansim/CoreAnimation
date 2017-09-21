@@ -582,7 +582,7 @@ class ViewController: UIViewController {
     }
 }
 
-extension _8_14_ViewController: CAAnimationDelegate {
+extension ViewController: CAAnimationDelegate {
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         print(flag)
     }
