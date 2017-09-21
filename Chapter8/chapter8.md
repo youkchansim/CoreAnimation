@@ -540,7 +540,7 @@ class ViewController: UIViewController {
 * 위와 같은 접근방식에 대한 주의사항이 있다. renderInContext 메서드는 레이어의 배경 이미지와 하위 레이어를 캡처하지만 해당 하위 레이어에 적용된 변환을 올바르게 처리하지 않으며, 비디오 또는 OpenGL 콘텐츠에서 작동하지 않는다. CATransition은 이 제한의 영향을 받지 않는것으로 보이므로 아마도 개인 메서드를 사용하여 스냅샷을 캡처할 수 있다.
 
 ### Canceling an animation in Progress
-* 이 장의 앞부분에서 설명한 것처럼 `add(anim: CAAnimation##CAAnimation, forKey: String?)` 메서드의 key 매개 변수를 사용하여 다음 방법과 같이 레이어에 추가된 애니메이션을 검색할 수 있다.
+* 이 장의 앞부분에서 설명한 것처럼 `add(anim: CAAnimation, forKey: String?)` 메서드의 key 매개 변수를 사용하여 다음 방법과 같이 레이어에 추가된 애니메이션을 검색할 수 있다.
 ```Swift
 animation(forKey: String)
 ```
