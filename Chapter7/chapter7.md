@@ -59,8 +59,8 @@ CATransaction.setCompletionBlock {
 
 ### Layer Actions
 - CALayer가 자동으로 적용하는 애니메이션을 Action이라고 한다.
-  1. 계층에 Delegate가 있는지 여부와 Delegate가 CALayerDelegate 프롵토콜에 지정된 actionForLayer 메서드를 구현하는지 여부를 확인한다. 그럴 경우 호출하고 결과를 반환합니다.
-  2. Delegate가 없거나 Delegate가 actionForLayer 메서드를 구현하지 않으면 레이어는 Action Dictionary를 확인한다. 여기에는 Action에 대한 속성 이름이 매핑되어 있다.
+  1. 계층에 Delegate가 있는지 여부와 Delegate가 CALayerDelegate 프롵토콜에 지정된 actionForLayer 메서드를 구현하는지 여부를 확인한다. 그럴 경우 호출하고 결과를 반환다.
+  2. Delegate가 없거나 Delegate가 actionForLayer 메서드를 구현하지 않으면 레이어는 Action Dictionary를 확인한다. 여기에는 Action에 대한 속성 이름이 매핑되어 있다.
   3. Action Dictionary에 question의 속성에 대한 항목이 포함되어 있지 않으면 레이어는 Style Dictionary hierarchy에서 속성 이름과 일치하는 모든 작업을 검색한다.
   4. 마지막으로 Style Dictionary hierarchy의 아무 곳에서나 적절한 동작을 찾지 못하면 레이어는 알려진 속성의 표준 동작을 정의하는 defaultActionForKey 메서드를 호출하도록 fall back한다.
 
@@ -110,7 +110,7 @@ class ViewController: UIViewController {
     }
 }
 ```
-- 위의 코드는 애니메이션이 적용되지 않는 코드이다. 그 이유는 actionForKey에서 nil을 반환하기 때문이다. UIKit는 암시적 애니메이션을 비활성화하며, 모든 UIView는 백업 레이어의 Delegate 역할을 하여 actionForLayer 메서드에 대한 구현을 제공한다. 그러므로 애니메이션 블록 내부에 있지 않으면 UIView는 모든 레이어 액션에 대해 nil을 반환하지만 애니메이션 블록의 범위 내에서 nil이 아닌 값을 반환한다.
+- 위의 코드는 뷰가 처음에 나타날 때 애니메이션이 적용되지 않는 코드이다. 그 이유는 actionForKey에서 nil을 반환하기 때문이다. UIKit는 암시적 애니메이션을 비활성화하며, 모든 UIView는 백업 레이어의 Delegate 역할을 하여 actionForLayer 메서드에 대한 구현을 제공한다. 그러므로 애니메이션 블록 내부에 있지 않으면 UIView는 모든 레이어 액션에 대해 nil을 반환하지만 애니메이션 블록의 범위 내에서 nil이 아닌 값을 반환한다.
 - 아래와 같은 간단한 에제를 통해 쉽게 위의 정의를 확인할 수 있다.
 ```Swift
     override func viewDidLoad() {
