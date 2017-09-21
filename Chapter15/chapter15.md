@@ -174,8 +174,8 @@ class ViewController_15_4: UIViewController {
             var adjusted = bounds
             adjusted.size.width /= PERSPECTIVE(CGFloat(z * SPACING))
             adjusted.size.height /= PERSPECTIVE(CGFloat(z * SPACING))
-            adjusted.origin.x = (adjusted.size.width - bounds.size.width) / 2
-            adjusted.origin.y = (adjusted.size.height - bounds.size.height) / 2
+            adjusted.origin.x -= (adjusted.size.width - bounds.size.width) / 2
+            adjusted.origin.y -= (adjusted.size.height - bounds.size.height) / 2
             
             for y in 0 ..< HEIGHT {
                 if CGFloat(y * SPACING) < adjusted.origin.y || CGFloat(y * SPACING) >= adjusted.origin.y + adjusted.size.height {
@@ -256,8 +256,8 @@ class ViewController_15_5: UIViewController {
             var adjusted = bounds
             adjusted.size.width /= PERSPECTIVE(CGFloat(z * SPACING))
             adjusted.size.height /= PERSPECTIVE(CGFloat(z * SPACING))
-            adjusted.origin.x = (adjusted.size.width - bounds.size.width) / 2
-            adjusted.origin.y = (adjusted.size.height - bounds.size.height) / 2
+            adjusted.origin.x -= (adjusted.size.width - bounds.size.width) / 2
+            adjusted.origin.y -= (adjusted.size.height - bounds.size.height) / 2
             
             for y in 0 ..< HEIGHT {
                 if CGFloat(y * SPACING) < adjusted.origin.y || CGFloat(y * SPACING) >= adjusted.origin.y + adjusted.size.height {
