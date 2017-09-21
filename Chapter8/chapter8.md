@@ -310,7 +310,7 @@ class ViewController: UIViewController {
         layer.contents = UIImage(named: "Ship")?.cgImage
         layerView.layer.addSublayer(layer)
         
-        let animation = CABasicAnimation(keyPath: "transform")
+        let animation = CABasicAnimation(keyPath: "transform.rotation")
         animation.duration = 2.0
         animation.toValue = M_PI * 2
         layer.add(animation, forKey: nil)
