@@ -1,7 +1,7 @@
 # CoreAnimationStudy
 
-[#1](../../issues/1) The Layer Tree
+[1. The Layer Tree](Chapter1/chapter1.md)
 
-[#2](../../issues/2) The backing Image
+[2. The backing Image](Chapter2/chapter2.md)
 
-[#3](../../issues/3) Layer Geometry
+[3. Layer Geometry](Chapter3/chapter3.md)
