@@ -23,3 +23,5 @@
 [11. Timer-Based Animation](Chapter11/chapter11.md)
 
 [12. Tuning for Speed](Chapter12/chapter12.md)
+
+[13. Efficient Drawing](Chapter13/chapter13.md)
