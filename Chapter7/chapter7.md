@@ -60,7 +60,6 @@ CATransaction.setCompletionBlock {
 ### Layer Actions
 - CALayer가 자동으로 적용하는 애니메이션을 Action이라고 한다.
   1. 계층에 Delegate가 있는지 여부와 Delegate가 CALayerDelegate 프롵토콜에 지정된 actionForLayer 메서드를 구현하는지 여부를 확인한다. 그럴 경우 호출하고 결과를 반환다.
-  
   2. Delegate가 없거나 Delegate가 actionForLayer 메서드를 구현하지 않으면 레이어는 Action Dictionary를 확인한다. 여기에는 Action에 대한 속성 이름이 매핑되어 있다.
   3. Action Dictionary에 question의 속성에 대한 항목이 포함되어 있지 않으면 레이어는 Style Dictionary hierarchy에서 속성 이름과 일치하는 모든 작업을 검색한다.
   4. 마지막으로 Style Dictionary hierarchy의 아무 곳에서나 적절한 동작을 찾지 못하면 레이어는 알려진 속성의 표준 동작을 정의하는 defaultActionForKey 메서드를 호출하도록 fall back한다.
