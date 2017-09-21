@@ -46,8 +46,8 @@ class ViewController: UIViewController {
 * 2장에서 CAShapeLayer가 CALayer cornerRadius 속성을 사용하는 것과는 반대로 둥근 모서리가 있는 뷰를 만드는 또다른 방법을 제공한다고 언급했다. CAShapeLayer를 사용하는 것이 더 많은 작업이지만 각 모서리의 반경을 독립적으로 지정할 수 있다는 이점이 있다. 각각의 직선과 호를 사용하여 수동으로 둥근 사각형 경로를 만들 수 있지만 UIBezierPath에는 실제로 둥근 사각형을 만들기 위한 편리한 생성자가 자동으로 있다. 다음 코드는 세개의 둥근 모서리와 하나의 선명한 경로를 생성한다.
 ```Swift
 let rect = CGRect(x: 50, y: 50, width: 100, height: 100)
-let ridii = CGSize(width: 20, height: 20)
-let path = UIBezierPath(roundedRect: rect, byRoundingCorners: [.topRight, .topRight, .bottomLeft], cornerRadii: ridii)
+let radii = CGSize(width: 20, height: 20)
+let path = UIBezierPath(roundedRect: rect, byRoundingCorners: [.topRight, .topRight, .bottomLeft], cornerRadii: radii)
 ```
 
 ## CATextLayer
