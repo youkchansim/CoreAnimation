@@ -1,4 +1,4 @@
-# Layer Geometry
+# Visual Effects
 
 ### Rounded Corners
 - 레이어는 모서리 부분의 곡률을 제어하는 cornerRadius라는 속성을 갖고있다. 이는 해당 레이어에만 영향을 미치며, 하위 레이어들에는 영향을 미치지 않는다. 하지만 masksToBounds의
