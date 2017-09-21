@@ -325,3 +325,81 @@ extension ViewController_11_3 {
     }
 }
 ```
+
+### Adding User Interaction
+* 다음 단계는 Crate가 화면 하단에서 떨어지지 않도록 볼 가장자리에 보이지 않는 벽을 추가하는 것이다. 우리가 상자에 사용했던 것과 같은 다른 직사각형 cpPolyShape로 이것을 구현한다고 생각할 수 있지만, 상자와 충돌할 때가 아니라 상자를 볼 때 감지하기를 원하므로 단색이 아닌 속이 빈 사각형이 필요하다.
+* 네 개의 cpSegmentShape 객체를 cpSpace에 추가하여 구현할 수 있다.(cpSegmentShape는 직선 세그먼트를 나타내므로 4개의 사각형을 결합하여 직사각형을 형성할 수 있다.) 우리가 했던 것처럼 새로운 cpBody 인스턴스 대신 공간의 staticBody 속성(중력의 영향을 받지 않는 움직이지 않는 Body)에 연결한다. 테두리 상자가 화면에서 떨어지거나 떨어지는 나무 상자가 떨어질 때 떼어내는 것을 원하지 않기 때문에 각 상자를 사용한다.
+* 또한 서로 상호작용할 수 있도록 몇 개의 상자를 추가할 것이다. 마지막으로 가속도계 지원을 추가하여 휴대 전화를 기울이면 중력 벡터가 조정된다.(이것을 테스트 하려면 화면을 회전하더라도 시뮬레이터가 가속도계 이벤트를 생성하지 않기 때문에 실제 장치에서 실행해야 한다.) 아래는 업데이트 된 코드를 보여주며, 그림 12.2는 결과를 보여준다.
+* 예제가 가로모드로 고정되어 있기 때문에 x 및 y 값을 가속도계 벡터로 바꿨다. 세로 모드에서 예제를 실행하는 경우 중력 방향이 화면에 표시된 것과 일치하는지 다시 확인해야 한다. 잘못 이해했는지 알 수 있다. 나무 상자가 위쪽이나 옆으로 떨어질 것이다.
+
+![](Resource/11_2.png)
+```Swift
+class ViewController_11_4: UIViewController {
+    let GRAVITY = 1000
+    
+    var space: UnsafeMutablePointer<cpSpace>?
+    var timer: CADisplayLink?
+    var lastStep: CFTimeInterval = 0
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        view.layer.isGeometryFlipped = true
+        
+        space = cpSpaceNew()
+        cpSpaceSetGravity(space, cpv(0, -(Float)(GRAVITY)))
+        addWallShapeWithStart(start: cpv(0,0), end: cpv(300,0))
+        addWallShapeWithStart(start: cpv(300,0), end: cpv(300,300))
+        addWallShapeWithStart(start: cpv(300,300), end: cpv(0,300))
+        addWallShapeWithStart(start: cpv(0,300), end: cpv(0,0))
+        
+        addCrateWithFrame(frame: CGRect(x: 0, y: 0, width: 32, height: 32))
+        addCrateWithFrame(frame: CGRect(x: 32, y: 0, width: 32, height: 32))
+        addCrateWithFrame(frame: CGRect(x: 64, y: 0, width: 64, height: 64))
+        addCrateWithFrame(frame: CGRect(x: 128, y: 0, width: 32, height: 32))
+        addCrateWithFrame(frame: CGRect(x: 0, y: 32, width: 64, height: 64))
+        
+        lastStep = CACurrentMediaTime()
+        timer = CADisplayLink(target: self, selector: #selector(step))
+        timer?.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
+    }
+}
+
+extension ViewController_11_4 {
+    func addCrateWithFrame(frame: CGRect) {
+        let crate = Crate(frame: frame)
+        view.addSubview(crate)
+        cpSpaceAddBody(self.space, crate.body)
+        cpSpaceAddShape(self.space, crate.shape)
+    }
+    
+    func addWallShapeWithStart(start: cpVect, end: cpVect) {
+        let wall = cpSegmentShapeNew(self.space?.pointee.staticBody, start, end, 1)
+        cpShapeSetCollisionType(wall, 2)
+        cpShapeSetFriction(wall, 0.5)
+        cpShapeSetElasticity(wall, 0.8)
+        cpSpaceAddStaticShape(self.space, wall)
+    }
+    
+    func step(timer: CADisplayLink) {
+        let thisStep = CACurrentMediaTime()
+        let stepDuration = thisStep - lastStep
+        lastStep = thisStep
+        
+        cpSpaceStep(space, cpFloat(stepDuration))
+        
+        let b: cpSpaceShapeIteratorFunc = { shape, data in
+            let crate = shape?.pointee.data.assumingMemoryBound(to: Crate.self).pointee
+            let body = shape?.pointee.body
+            crate?.center = cpBodyGetPos(body)
+            crate?.transform = CGAffineTransform(rotationAngle: CGFloat(cpBodyGetAngle(body)))
+        }
+        
+        cpSpaceEachShape(space, b, nil)
+    }
+    
+    func accelerometor(accelerometer: UIAccelerometer, acceleration: UIAcceleration) {
+        cpSpaceSetGravity(space, cpv(acceleration.x * GRAVITY, aceleration.y * GRAVITY))
+    }
+}
+```
