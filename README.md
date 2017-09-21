@@ -7,3 +7,5 @@
 [3. Layer Geometry](Chapter3/chapter3.md)
 
 [4. Visual Effects](Chapter4/chapter4.md)
+
+[7. Implicit Animations](Chapter7/chapter7.md)
