@@ -12,7 +12,6 @@ Velocity = change / time
 * 짧은 거리를 운전하는 자동차를 생각해보면 60mph에서 시작하지 않을것이고 목적지에 도착 시 즉시 0mph로 떨어질 것이다. 한 가지는 무한대로 가속해야 한다는 것이다.
 * 현싲럭으로 천천히 전속력으로 가속화 될 것이고 목적지가 가까워지면 마침내 완만하게 멈출때까지 속도가 느려질 것이다.
 * 다른 예로 표면에 떨어지는 물체는 정지상태로 시작한 다음 표면에 닿을때 까지 계속 가속한다. 현실세계의 모든 물체는 가속하고 감속한다. 그렇다면 애니메이션에서 이러한 종류의 가속을 어떻게 구현할까? 하나의 옵션은 물리 엔진을 사용하여 애니메이션 오브젝트의 마찰과 운동량을 현실적으로 모델링하는 것이지만 대부분의 경우 과잉이다. 애니메이션 사용자 인터페이스의 경우 우리는 레이어를 실제의 실물처럼 움직일 수 있는 몇가지 타이밍 방적식을 원하지만 계산하는것은 너무 복잡하다. 이러한 유형의 방정식에 대한 이름은 기능을 완화하는 것이며, 다행스럽게도 Core Animation에는 여러가지 기본 기능이 내장되어있어 사용할 준비가 되어있다.
-
 ### CAMediaTimingFunction
 * Easing 함수를 사용하려면 CAMediaTimingFunction 클래스의 객체인 CAAnimation의 timingFunction 속성을 설정해야 한다. Implicit Animation의 타이밍 함수를 변경하려면 CATransaction의 `setAnimationTimingFunction` 메서드를 사용할 수도 있다. CAMediaTimingFunction을 만드는 데는 두 가지 방법이 있다. 가장 간단한 옵션은 `timingFunctionWithName` 생성자 메서드를 호출하는 것이다. 이것은 아래 상수 중 하나를 가져올 수 있다.
   * kCAMediaTimingFunctionLinear
@@ -51,3 +50,77 @@ class ViewController: UIViewController {
     }
 }
 ```
+
+### UIView Animation Easing
+* UIView의 애니메이션 메서드도 구문과 상수가 다르지만 Easing 함수를 지원한다. UIView 애니메이션 메서드의 easing를 변경하려면 애니메이션 options 매개 변수에 다음 상수 중 하나를 추가한다.
+  * UIViewAnimationOptionCurveEaseInOut
+  * UIViewAnimationOptionCurveEaseIn
+  * UIViewAnimationOptionCurveEaseOut
+  * UIViewAnimationOptionCurveLinear
+
+* 위의 것들은 CAMediaTimingFunction과 짝으로 일치한다. UIViewAnimationOptionCurveEaseInOut은 사용자가 지정하지 않으면 사용되는 기본값이다.(kCAMediaTimingFunctionDefault에 대한 UIKit에는 해당 항목이 없다.)
+* 위의 함수들이 어떻게 동작하는지 예를 들어보자.(UIKit 애니메이션이 호승팅 된 레이어에서 작동하지 않기 때문에 이 예제에서는 호스팅 된 레이어를 사용하여 UIView로 전환하였다.)
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var colorView: UIView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        colorView.backgroundColor = .red
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        UIView.animate(withDuration: 1.0, delay: 0.0, options: [.curveEaseInOut], animations: {
+            guard let location = touches.first?.location(in: self.view) else { return }
+            self.colorView.center = location
+        }, completion: nil)
+    }
+}
+```
+
+### Easing and Keyframe Animations
+* 8장의 색성 전환 KeyFrameAnimation은 색상 간의 션형 페이싱으로 인해 약간 이상해 보였으므로 색상 사이의 전환이 자연스럽지 않게 발생하였다. 이를 보정하기 위해 kCAMediaTimingFunctionEaseIn 보다 적절한 easing 함수를 적용할 수 있다. 이 함수는 색인이 있는 전구가 실제처럼 작동하는 것처럼 레이어가 색상을 변경함에 따라 약간의 펄스 효과를 추가한다.
+* 우리는 전체 애니메이션에 걸쳐 균일하게 함수를 적용하고싶지 않다. 각 애니메이션 단계마다 Easing을 반복하여 각 color transition pulse가 순서대로 반복되도록 하려는 것이다.
+* CAKeyframeAnimation에는 NSArray인 timingFunctions 속성이 있다. 이를 사용하여 애니메이션의 각 단계마다 다른 타이밍 함수를 지정할 수 있다. 함수는 각 키 프레임 쌍 사이의 애니메이션 속도를 설명하기 때문에 지정된 함수 수는 키 프레임 배열의 항목 수에서 1을 뺀 값과 같아야 한다.
+* 이 경우 전체적으로 동일한 easing 함수를 사용하고자 하지만 실제로는 시퀀스 전체에서 한번 적용하지 않고 각 단계마다 함수를 반복해야 한다는 사실을 애니메이션이 알 수 있도록 함수 배열을 제공해야 한다. 우리는 단순히 동일한 함수의 여러 복사본을 포함하는 배열을 사용한다. 업데이트 된 프로젝트를 실행하면 이제 애니메이션이 좀 더 자연스러워 보일것이다.
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var layerView: UIView!
+
+    let colorLayer = CALayer()
+    
+    @IBAction func changeColor(_ sender: Any) {
+        let animation = CAKeyframeAnimation(keyPath: "backgroundColor")
+        animation.duration = 2.0
+        animation.values = [
+            UIColor.blue.cgColor,
+            UIColor.red.cgColor,
+            UIColor.green.cgColor,
+            UIColor.blue.cgColor,
+        ]
+        
+        let fn = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn)
+        animation.timingFunctions = [fn, fn, fn]
+        
+        colorLayer.add(animation, forKey: nil)
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        colorLayer.frame = CGRect(x: 50, y: 50, width: 100, height: 100)
+        colorLayer.backgroundColor = UIColor.blue.cgColor
+        
+        layerView.layer.addSublayer(colorLayer)
+    }
+}
+```
+
+## Custom Easing Functions
+* 8장에서는 애니메이션을 포함하도록 시계 프로젝트를 업데이트하였다. 그것은 좋아 보이지만 right easing function이 더 잘될것이다. 실제 아날로그 시계의 침이 움직이면 보통 천천히 시작한 다음 갑자기 멈추고 마지막 순간에 멈추기 시작한다. 표준 easing function 중 어느 것도 우리가 원하는 효과가 없다. 어떻게 새로운 것을 만들 수 있을까?
+* `functionWithName` 생성자 외에도 CAMediaTimingFunction에는 네개의 부동 소수점 인수가 있는 constructor 메서드 인 `functionWithControlPoints`가 있다. 이 메서드를 사용하여 시계 애니메이션에 이상적으로 적합한 사용자 정의 easing 함수를 만들 수 있다. 그러나 이 것을 사용하는 방법을 이해하려면 `CAMediaTimingFunction`이 작동하는 방식에 대해 더 자세히 알아야 한다.
+
+### The Cubic Bézier Curve
+* CAMediaTimingFunction 함수의 기본 원리는 입력 시간을 시작 값과 끝 값 사이의 비례 변화로 변환한다는 것이다. 이를 x 축에 시간(t), y 축에 (delta)를 변경하여 간단한 그래프로 나타낼 수 있다. 따라서 선형 easing에 대한 그래프는 원점에서 간단한 대각선이다.
+![](Resource/10_1.png)
