@@ -19,3 +19,5 @@
 [9. Layer Time](Chapter9/chapter9.md)
 
 [10. Easing](Chapter10/chapter10.md)
+
+[11. Timer-Based Animation](Chapter11/chapter11.md)
