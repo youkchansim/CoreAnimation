@@ -202,7 +202,7 @@ extension ViewController_9_3 {
 let time = CACurrentMediaTime()
 ```
 * 이 함수에 의해 반한된 절대 값은 거의 무의미하다(장치가 마지막으로 재부팅 된 이후에 장치가 깨어 났을 대의 시간을 나타낸다.). 그러나 이 장치의 목적은 상대 값에 대해 타이밍을 측정할 수 있다. 장치가 대기 상태일 때 mach time은 일시중지 된다. 즉, mach time에 의존하는 모든 CAAnimation도 일시 중지된다.
-* 이러한 이유로 mach time은 장기간의 시간 측정에 유용하지 않다. CACurrentMediaTime을 사용하여 실시간 시계를 업데이트하는 것은 현명하지 않을 수 있다(3장의 예제에서 했던것 처럼 NADate의 현재 값을 대신 폴링할 수 있다.).
+* 이러한 이유로 mach time은 장기간의 시간 측정에 유용하지 않다. CACurrentMediaTime을 사용하여 실시간 시계를 업데이트하는 것은 현명하지 않을 수 있다(3장의 예제에서 했던것 처럼 NSDate의 현재 값을 대신 폴링할 수 있다.).
 * 각 CALayer와 CAAnimation 인스턴스는 시간에 대한 자체 로컬 개념을 가지고 있다. 이 개념은 레이어 / 애니메이션 계층에서 구조 부모 객체의 beginTime, timeOffset 및 speed 속성에 따라 전역 시간과 다를 수 있다. 서로 다른 레이어의 로컬 공간 좌표 시스템간에 변화하는 메서드가 있는것처럼 CALayer에는 다른 레이어의 로컬 시간 프레임간에 변하는 메서드도 있다.
 ```Objective-C
 - (CFTimeInterval)convertTime:(CFTimeInterval)t fromLayer:(CALayer *)l;
