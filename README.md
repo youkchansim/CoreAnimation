@@ -15,3 +15,5 @@
 [7. Implicit Animations](Chapter7/chapter7.md)
 
 [8. Explicit Animations](Chapter8/chapter8.md)
+
+[9. Layer Time](Chapter9/chapter9.md)
