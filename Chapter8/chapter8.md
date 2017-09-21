@@ -1,5 +1,5 @@
 # Explicit Animations
-* 이전 장에서는 Implicit Animations에 대하여 배웠다. Implicit Animations은 iOS에ㅓ 애니메이션 사용자 인터페이스를 만드는 간단한 방법이며, UIKit의 자체 애니메이션 메서드를 기반으로하는 메커니즘이지만 완전히 범용 애니메이션 솔루션은 아니다. 이 장에서는 명시적 애니메이션을 살펴보고 특정 속성에 대한 사용자 지정 애니메이션을 만들거나 임의의 곡선을 따라 이동하는 것과 같은 비선형 애니메이션을 만들것이다.
+* 이전 장에서는 Implicit Animations에 대하여 배웠다. Implicit Animations은 iOS에 애니메이션 사용자 인터페이스를 만드는 간단한 방법이며, UIKit의 자체 애니메이션 메서드를 기반으로하는 메커니즘이지만 완전히 범용 애니메이션 솔루션은 아니다. 이 장에서는 명시적 애니메이션을 살펴보고 특정 속성에 대한 사용자 지정 애니메이션을 만들거나 임의의 곡선을 따라 이동하는 것과 같은 비선형 애니메이션을 만들것이다.
 
 ## Property Animations
 * 속성 애니메이션은 레이어의 단일 속성을 대상으로하고 해당 속성이 움직일 목표 값 또는 값 범위를 지정한다. 속성 애니메이션은 기본 및 키 프레임의 두 가지 유형으로 제공된다.
@@ -55,9 +55,13 @@ extension ViewController {
 }
 ```
 * 위의 예제를 실행하게 되면 제대로 실행되지 않는다. 그 이유는 애니메이션이 레이어의 모델을 수정하지 않고 프리젠테이션만 수정하기 때문이다. 애니메이션이 끝나고 레이어에서 젝되면 레이어는 모델 속성에 의해 정의된 모양으로 되돌아간다. 레이어 트리의 backgroundColor 속성을 변경하지 않았으므로 레이어가 원래 색상으로 돌아간다.
+
 * 이전에 암시적 애니메이션을 사용하고 있을 때 기본 액션은 방금 사용한것과 같은 CABasicAnimation을 사용하여 구현되어있다.(7장에서 actionForLayer: forKey: delegate 메소드의 결과를 로깅하여 액션 유형이 CABasicAnimation임을 알 수 있다.) 그 경우에는 속성을 설정하여 애니메이션을 트리거 하였지면 위의 방식은 애니메이션을 직접 수행하지만 속성을 더 이상 설정하지 않는다.
+
 * 애니메이션을 레이어 액션으로 지정하면(그리고 속성 값을 변경하여 애니메이션을 트리거한다.) 속성 값과 애니메이션 상태를 동기화하는 것이 가장 쉬운 방법이지만 어떤 이유에서든 이를 수행할 수 없을 경우(일반적으로 우리가 애니 메이팅을 해야하는 레이어는 UIView의 backing layer이다.) 애니메이션을 시작하기 직전이나 애니메이션이 끝난 직후에 속성 값을 업데이트 할 수 있는 두가지 옵션이 있다.
+
 * 애니메이션이 시작되기 전에 속성을 업데이트하는 것이 이러한 옵션보다 간단하지만 암시적 fromValue를 사용할 수 없다는 것을 의미하므로 애니메이션의 fromValue를 수동으로 설정하여 레이어의 현재 값과 일치시켜야한다.
+
 * 이를 고려하여 애니메이션을 생성하는 위치와 레이어에 추가하는 위치 사이에 다음 두 줄을 삽입하면 스냅 백을 제거할 수 있다.
 ```Swift
 animation.fromValue = layer.backgroundColor
@@ -107,10 +111,12 @@ extension ViewController {
 }
 ```
 * 위와같은 구현은 byValue가 아닌 toValue를 사용하여 애니메이션을 처리하는 것이 일반적인 솔루션의 좋은 예이다. 보다 편리하고 재사용 할 수 있도록 CALayer의 카테고리 메소드로 패키지화 할 수 있다.
+
 * 이러한 모든 문제는 겉으로 보기에는 단순한 문제를 해결하는 데 많은 어려움이 될 수 있지만 해결방안은 상당히 복잡하다. 애니메이션을 시작하기 전에 대상 속성을 업데이트 하지 않으면 애니메이션이 완전히 완료될 때 까지 대상 속성을 업데이트 할 수 없거나 진행중인 CABasicAnimation을 취소된다.
 
 ### CAAnimationDelegate
 * 7장에서 암시적 애니메이션을 사용할 때 우리는 CATransaction 완료 블록을 사용하여 애니메이션이 끝난 시점을 탐지할 수 있었다. 그러나 애니메이션이 트랜잭션과 연관되어 있지 않으므로 명시적 애니메이션을 사용하는 경우에 이 방법을 사용할 수 없다. 명시적 애니메이션이 끝난시기를 확인하려면 CAAnimationDelegate 프로토콜을 준수하는 클래스의 애니메이션 Delegate 속성을 사용해야한다.
+
 * 새 트랜잭션을 설정하고 속성을 업데이트 할 때 레이어 액션을 비활성화해야한다. 그렇지 않으면 명시적인 CABasicAnimation 때문에 애니메이션이 두 번 발생하고 그 속성에 대한 암시적 애니메이션 작업으로 인해 애니메이션이 다시 발생한다.
 
 ```Swift
@@ -155,8 +161,11 @@ extension ViewController: CAAnimationDelegate {
 ```
 
 * 완료 블록 대신 델리게이트 패턴을 사용하는 CAAnimation의 문제점은 추적할 여러 애니메이션 또는 애니메이션 레이어가 있을 때 매우 어렵다. 뷰컨트롤러에서 애니메이션을 생성할 때 컨트롤러를 애니메이션 위임자로 사용하지만 모든 애니메이션이 동일한 델리게이트 메서드를 호출하므로 어떤 완료 호출을 결정해야할지 방법이 필요하다.
+
 * 3장 `Layer Geometry`의 시계를 고려했을 때 원래 매초마다 초침의 각도를 업데이트함으로써 애니메이션 없이 시계를 구현했다. 암시적 애니메이션을 사용하여 초침을 애니메이트 할 수 없다. 그 이유는 초침이 UIView 인스턴스에 의해 표현되고 암시적 애니메이션이 비활성화되어 있기 때문이다.
+
 * 그렇다면 어떻게 애니메이션의 어떤 뷰가 완료되었다는 것을 알 수 있을까?
+
 * 간단하다. CAAnimation은 KVC 프로토콜을 준수하기 때문에 setValue:, forKey 및 valueForKey 메소드를 사용하여 키에 value를 맵핑하면된다.
 ```Swift
 ...
@@ -188,11 +197,14 @@ extension ViewController: CAAnimationDelegate {
 ...
 ```
 * 위의 방법으로 애니메이션이 끝나고 올바른 값으로 변형된것을 확인했다. 하지만 이러한 조치를 취한 후에도 또 다른 문제가 있다. 시뮬레이터에선 잘되지만 실제 디바이스에서 animationDidStop가 호출되기 이전에 시계 바늘이 잠시 원래 값으로 돌아오는 것을 볼 수 있다.
+
 * 문제는 애니메이션이 끝난 후에 콜백 메서드가 호출 되더라도 애니메이션 속성이 전 상태로 리셋되기 전에 호출된다는 보장이 없다. 이것은 시뮬레이터 뿐 만 아니라 장치에서 항상 애니메이션 코드를 테스트해야하는 이유의 좋은 예이다.
+
 * `fillMode`라는 속성을 사용하여 이 문제를 해결할 수 있다. 이는 다음장에서 살펴볼 것이다.
 
 ### Keyframe Animations
 * CABasicAnimation은 iOS의 암시적 애니메이션 대부분에 숨어있는 기본 메커니즘을 보여주지만 CABasicAnimation을 명시적으로 레이어에 추가하는것은 동일한 효과를 얻을 수 있는 더 간단한 방법이 있을 때 약간의 이점이 있다. 그러나 CAKeyframeAnimation은 상당히 강력하고 UIKit에 노출된 인터페이스가 없다.
+
 * CAkeyframeAnimation은 CAPropertyAnimation의 하위 클래스인 CABasicAnimation과 같다. 하나의 속성에서 계속 작동하지만 CABasicAnimation과 달리 단 하나의 시작 및 끝 값에만 국한되지 않고 사이에 애니메이션을 적용할 임의의 시퀀스 값을 제공할 수 있다.
 ```Swift
 let keyframeAnimation = CAKeyframeAnimation(keyPath: "backgroundColor")
@@ -206,8 +218,11 @@ let keyframeAnimation = CAKeyframeAnimation(keyPath: "backgroundColor")
         layer.add(keyframeAnimation, forKey: nil)
 ```
 * 위에서 시퀀스의 시작과 끝 색상을 파란색으로 지정했다. 이는 CAKeyframeAnimation이 자동으로 현재 값을 첫 번째 프레임으로 사용하는 옵션을 가지고 있지 않기 때문에 필요하다.(CABasicAnimation에서 fromValue를 nil로 남겨두었던것처럼). 애니메이션은 시작 시 첫 번째 키 프레임 값으로 바로 이동하고 완료되면 즉시 원래 속성 값으로 되돌아간다. 따라서 부드러운 애니메이션의 경우 시작 및 끝 키 프레임을 동일한 값으로 일치시킨다.
+
 * `duration`을 0.2초에서 2초로 변경하였는데 그 이유는 시퀀스를 순회할 때 동일한 시간을 두고 애니메이션이 적용되기 때문에 정말 이상하게 보이기 때문이다. 이를 더 자연스럽게 보이게 하려면 10장에서 배울것이다.
+
 * CAKeyframeAnimation은 CGPath를 사용하여 애니메이션을 지정하는 다른 방법이 있다. path 속성을 사용하면 Core Graphics 함수를 사용하여 애니메이션을 그리는 방식으로 직관적인 시퀀스 동작을 정의할 수 있다.
+
 * 이를 위해 예제 한가지를 해 볼 것이다.
 ```Swift
 class ViewController: UIViewController {
@@ -244,6 +259,7 @@ class ViewController: UIViewController {
 ![](Resource/8_1.png)
 
 * 예제를 실행하면 우주선의 애니메이션이 약간 비현실적으로 보일 수 있다. 왜냐면 곡선의 탄제트와 일치하도록 움직이기 보다는 항상 오른쪽만 직접 가리키기 때문이다. 우주선의 affineTransform을 조정하여 움직이는 방향으로 애니메이션을 만들 수 있지만 다른 애니메이션과 동기화하는 것은 까다로울 수 있다.
+
 * 다행히도 Apple은 이 시나리오를 예상하고 rotationMode라는 CAKeyframeAnimation에 속성을 추가했다. rotationMode를 상수값 kCAAnimationRotateAuto로 설정하면 레이어는 애니메이션이 적용될 때 곡선의 탄젠트를 따라 자동으로 회전한다.
 ```Swift
 let animation = CAKeyframeAnimation(keyPath: "position")
@@ -277,7 +293,9 @@ class ViewController: UIViewController {
 }
 ```
 * 위의 예제는 이미지를 M_PI(180도) 회전하면서 애니메이션이 적용되지만, M_PI * 2(360도) 회전시키게 되면 애니메이션이 동작하지 않음을 알 수 있다. 그 이유는 fromValue와 toValue가 같기 때문이다(360도 회전 시 행렬이 fromValue 행렬과 같아짐을 알 수 있다.).
+
 * 각도의 상관없이 선박의 Translation 혹은 Scale 애니메이션을 적용하려면 어떻게 해야할까? 이 두 가지 모두 transform 속성을 수정해야하기 때문에 각각의 시점에서 각 애니메이션의 결합 효과를 다시 계산하고 결합 된 변형 값에서 복잡한 키 프레임 애니메이션을 만들어야 한다.
+
 * 다행스럽게 레이어를 회전시키기 위해서 keys를 사용하는 대신 key paths를 사용하면 쉽게해결할 수 있다. 즉 transform 속성 자체에 애니메이션을 적용하는 대신 transform.rotation key path에 애니메이션을 적용하는 것이다.
 ```Swift
 class ViewController: UIViewController {
@@ -312,7 +330,9 @@ class ViewController: UIViewController {
 
 ### Animation Groups
 * CABasicAnimation과 CAKeyframeAnimation은 개별 속성 대상으로 하지만 CAAnimationGroup을 사용하여 이러한 애니메이션을 여러개로 모을 수 있다.
+
 * CAAnimationGroup는 CAAnimation의 또 다른 하위 클래스로 애니메이션 배열 속성을 추가하여 다른 애니메이션을 그룹화하는 데 사용된다.
+
 * Animation group을 레이어에 추가하는 것은 애니메이션을 개별적으로 추가하는 것과는 근본적으로 다르므로 Animation group을 사용할 시기 또는 이유를 즉시 알 수 없다. 그룹내의 애니메이션 지속시간을 설정하거나 하나의 명령으로 레이어에서 여러 애니메이션을 추가 및 제거할 수 있는 편의성을 제공하지만 실질적인 유용성은 9장의 계층적인 타이밍 관련해서 명백해진다.
 ![](Resource/8_3.png)
 ```Swift
@@ -406,3 +426,168 @@ class ViewController: UIViewController {
 }
 ```
 * 코드에서 볼 수 있듯이 add(transition, forKey: nil) 메소드를 사용하여 속성 또는 그룹 애니메이션과 같은 방식으로 레이어에 추가된다. 그러나 속성 애니메이션과 달리 한번에 하나의 CATransition만 주어진 레이어에서 작동할 수 있다. 이러한 이유 때문에 key에 대해 지정하는 값에 관계없이 Transition은 실제로 상수 kCATransition으로 표시되는 "Transition"키와 연결된다.
+
+### Implicit Transitions
+* CATransition이 레이어에 변경된 사항을 부드럽게 처리할 수 있기 때문에 properties의 레이어 액션으로 사용하기에 이상적이지만 그렇지 않은 경우 애니메이션을 적용하기 어렵다. 물론 애플은 이것을 깨닫고 CALayer 컨텐츠 속성을 설정할 때 CATransition이 기본 동작으로 사용된다. 이것은 다른 모든 암시적 애니메이션 액션과 함께 레이어를 보기 위해 비활성화되지만 사용자가 직접 만든 레이어의 경우 레이어 컨텐츠 이미지의 변경 사항이 자동으로 크로스 페이드로 애니메이션 된다. 7장의 레이어 액션으로 CATransition을 사용하여 레이어의 배경색에 대한 변경사항을 애니메이션으로 나타냈다. backgroundColor 속성은 일반적인 CAPropertyAnimation을 사용하여 애니메이션으로 만들 수 있지만 대신에 CATransition을 사용할 수 있는것은 아니다.
+
+### Animating Layer Tree Changes
+* CATransition이 특정 레이어 속성에 작동하지 않는다는 사실은 변경된 내용을 적확하게 모르는 경우에도 레이어 변경 사항을 애니메이션으로 적용할 수 있다는 것을 의미한다. 예를들어 복잡한 내부 UITableView를 크로스 페이드로 재로드하는 작업을 원활하게 처리할 수 있다. 즉, 어떤 행이 추가 및 제거되었는지 또는 내부 뷰 계충 구조에 대해 알 필요없이 두 개의 다른 UIViewController 인스턴스 간에 Transition하지 않아도 된다. 이 두 경우는 레이어 속성 변경뿐만 아니라 실제 레이어 트리 변경에 애니메이션 효과를 적용하기 때문에 지금까지 시도한 것과는 다른 것이다. 애니메이션 과정에서 레이어에 물리적으로 레이어를 추가하거나 제거해야한다.
+
+* 이 경우 Trick은 CATransition이 연결된 레이어가 Transition 중에 트리에서 제거되지 않아야한다. 그러면 CATransition이 함께 제거되기 때문이다. 일반적으로 영향을 받는 레이어의 슈퍼 레이어로 Transition을 연결하면된다.
+
+* 아래 예제에서는 UITabBarController의 탭 사이에서 크로스 페이드 전환을 구현하는 방법을 보여준다. 여기에서는 단순히 기본 탭 응용 프로그램 프로젝트 템플릿을 가져와서 UITabBarControllerdelegate의 tabBarController: didSelectViewController: 메서드를 사용하여 전환 애니메이션을 적용하였다.
+```Swift
+class TabBarViewController: UITabBarController {
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        
+    }
+    
+    override func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+        let transition = CATransition()
+        transition.type = kCATransitionFade
+        
+        view.layer.add(transition, forKey: nil)
+    }
+}
+```
+
+### Custom Transitions
+* Transition은 원활하게 변경하기 어려운 속성을 애니메이션으로 만드는 강력한 방법이라는 것을 입증하였다. 그러나 CATransition의 애니메이션 유형 목록은 약간 제한적으로 보인다.
+* Apple이 Core Animation의 transition 기능을 UIView + transtionFromView(toView: duration: options: completion:) 및 transitionWithView(duration: options: animations:) 메소드를 통해 노출하지만, 사용 가능한 Transition 옵션은 CATransition의 Type Property의 이용가능한 상수와 완전히 다르다.
+* UIView Transition 방법 옵션 매개 변수에 지정할 수 있는 상수는 다음과 같다.
+  * UIViewAnimationOptionTransitionFlipFromLeft 
+  * UIViewAnimationOptionTransitionFlipFromRight 
+  * UIViewAnimationOptionTransitionCurlUp
+  * UIViewAnimationOptionTransitionCurlDown
+  * UIViewAnimationOptionTransitionCrossDissolve
+  * UIViewAnimationOptionTransitionFlipFromTop
+  * UIViewAnimationOptionTransitionFlipFromBottom
+
+* UIViewAnimationOptionTransitionCrossDissolve를 제외하고 이러한 전환 중 어느것도 CATransition Type에 해당하지 않는다. 이전의 Transition 예제의 수정된 버전을 사용하여 이러한 Transition 테스트를 할 수 있다.
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var imageView: UIImageView!
+    @IBAction func switchImageBtnAction(_ sender: Any) {
+        UIView.transition(with: imageView, duration: 1.0, options: [.transitionFlipFromLeft], animations: {
+            if let currentImage = self.imageView.image {
+                var index = self.images.index(of: currentImage) ?? 0
+                index = (index + 1) % self.images.count
+                self.imageView.image = self.images[index]
+            }
+        }, completion: nil)
+    }
+
+    var images: [UIImage] = []
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        images = [
+            UIImage(named: "Anchor")!,
+            UIImage(named: "Cone")!,
+            UIImage(named: "Igloo")!,
+            UIImage(named: "Spaceship")!,
+        ]
+    }
+}
+```
+* 문서에서 iOS5(Core Image Framework를 도입한 이후) 이후 CIFilter를 CATransition의 필터 속성과 함께 사용하여 추가 전환 유형을 만들 수 있음을 암시하는것으로 보인다. 그러나 iOS6에서는 여전히 작동하지 않는다. Core Image Filter를 CATransition과 함게 사용하면 아무 효과가 없다.(이것은 Mac OS에서만 지원되며 문서 불일치를 설명한다. 지금은 바뀌어있겠지..?)
+
+* 이러한 이유로 사용자는 원하는 효과에 따라 CATransition 또는 UIView 전환 방법 중 하나를 선택해야한다. 다행히도 iOS 차기 버전에서는 Core Image 전환 필터가 추가되어 CATransition을 통해 Core Image 전환 애니메이션 전체를 사용할 수 있다(새 동영상 제작 기능을 추가할 수도 있음.).
+
+* iOS에서 Cusmtom transition effects를 얻는 것은 불가능하다는 의미는 아니다. 단지 약간의 추가작업을 해야 할 뿐이다. 앞에서 설명한 것처럼 전환 애니메이션의 기본 원칙은 레이어의 현재 상테에 대한 스냅샷을 찍은 다음 장면 뒤에서 레이어를 변경하는 동안 해당 스냅샷에 애니메이션을 적용한다는 것이다. 레이어의 스냅샷을 만드는 방법을 파악할 수 있다면 CATransition이나 UIKit의 
+Transition 방법을 사용하지 않고 일반적인 속성 애니메이션을 사용하여 애니메이션을 직접 수행할 수 있다.
+
+* 레이어의 스냅샷을 찍는 것은 상대적으로 쉽다. CALayer는 현재 내용의 이미지를 Core Graphics 컨텍스트에 그려서 다른 이미지에 표시할 수 있는 `renderInContext` 메서드를 가지고 잇다. 이 스냅샷을 원본 앞에 놓으면 실제 뷰 내용에 대한 변경 사항을 숨기므로 간단한 전환 효과를 다시 만들 수 있다.
+
+* 아래 예제는 아이디어의 기본 구현을 보여준다. 현재 뷰 상태의 스냅샷을 찍은 다음 원래 뷰의 배경색을 변경하는 동안 스냅샷을 회전 및 페이드아웃한다. 아래 그림은 진행중인 사용자 정의 전환을 보여준다. 간단한 작업을 위해 UIView.animate 메소드를 사용하여 애니메이션을 수행했다. CABasicAnimation을 사용하여 똑같은 효과를 낼 수도 있지만 이것을 사용하면 레이어 변환 및 불투명도 속성에 별도의 애니메이션을 분리하는 설정을 해야하고 CAAnimationDelegate를 구현하여 애니메이션이 완료되면 화면에서 corverView를 제거해야한다.
+
+![](Resource/8_5.png)
+```Swift
+class ViewController: UIViewController {
+    @IBAction func performTransition(_ sender: Any) {
+        UIGraphicsBeginImageContextWithOptions(view.bounds.size, true, 0.0)
+        view.layer.render(in: UIGraphicsGetCurrentContext()!)
+        let coverImage = UIGraphicsGetImageFromCurrentImageContext()
+        
+        let coverView = UIImageView(image: coverImage)
+        coverView.frame = view.bounds
+        view.addSubview(coverView)
+        
+        let red = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        let green = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        let blue = CGFloat(arc4random()) / CGFloat(INT_MAX)
+        view.backgroundColor = UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+        
+        UIView.animate(withDuration: 1.0, animations: {
+            var transform = CGAffineTransform.init(scaleX: 0.01, y: 0.01)
+            transform = transform.rotated(by: CGFloat(M_PI_2))
+            coverView.transform = transform
+            coverView.alpha = 0.0
+        }, completion: { _ in
+            coverView.removeFromSuperview()
+        })
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    }
+}
+```
+* 위와 같은 접근방식에 대한 주의사항이 있다. renderInContext 메서드는 레이어의 배경 이미지와 하위 레이어를 캡처하지만 해당 하위 레이어에 적용된 변환을 올바르게 처리하지 않으며, 비디오 또는 OpenGL 콘텐츠에서 작동하지 않는다. CATransition은 이 제한의 영향을 받지 않는것으로 보이므로 아마도 개인 메서드를 사용하여 스냅샷을 캡처할 수 있다.
+
+### Canceling an animation in Progress
+* 이 장의 앞부분에서 설명한 것처럼 `add(anim: CAAnimation##CAAnimation, forKey: String?)` 메서드의 key 매개 변수를 사용하여 다음 방법과 같이 레이어에 추가된 애니메이션을 검색할 수 있다.
+```Swift
+animation(forKey: String)
+```
+* 특정 애니메이션을 종료하려면 다음 방법을 사용하여 애니메이션을 레이어에서 제거할 수 있다.
+```Swift
+removeAnimation(forKey: String)
+removeAllAnimations()
+```
+
+* 애니메이션은 제거되자마자 레이어의 모양은 현재 모델 값과 일치하도록 업데이트 된다(즉 애니메이션이 적용되기 이전 모양). 애니메이션은 자동적으로 완료가 되면 제거되는데 removedOnCompletion 속성을 false로 하면 제거되지 않는다. 이 속성을 false로 했을 때 유의사항은 애니메이션이 자동으로 지워지지 않으므로 사용하지 않는 애니메이션이  메모리에 계속 있을 수 있다.
+
+* 애니메이트를 멈추고 시작하는 버튼을 사용하여 회전하는 선박 예제를 다시한번 보자. 이번에 우리는 애니메이션 키에 대해 nil이 아닌 값을 제공하므로 나중에 제거할 수 있다. `animationDidStop(_ anim: CAAnimation, finished flag: Bool)` 메소드의 플래그 인수는 애니메이션이 자연스럽게 끝났거나 중단되었는지 여부를 나타내며 우리는 이것을 콘솔에 찍을것이다. 정지버튼을 사용하여 애니메이션을 종료하면 false로 기록되지만 완료하도록 허용하면 true가 기록된다.
+![](Resource/8_6.png)
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var containerView: UIView!
+
+    @IBAction func start(_ sender: Any) {
+        let animation = CABasicAnimation(keyPath: "transform.rotation")
+        animation.duration = 2.0
+        animation.byValue = M_PI * 2
+        animation.delegate = self
+        shipLayer.add(animation, forKey: "rotateAnimation")
+    }
+    
+    @IBAction func stop(_ sender: Any) {
+        shipLayer.removeAnimation(forKey: "rotateAnimation")
+    }
+    
+    let shipLayer = CALayer()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        shipLayer.frame = CGRect(x: 0, y: 0, width: 128, height: 128)
+        shipLayer.position = CGPoint(x: 100, y: 100)
+        shipLayer.contents = UIImage(named: "Ship")?.cgImage
+        
+        containerView.layer.addSublayer(shipLayer)
+    }
+}
+
+extension _8_14_ViewController: CAAnimationDelegate {
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        print(flag)
+    }
+}
+```
+
+### Summary
+* 이 장에서는 property animations(개별 레이어 속성의 애니메이션을 매우 구체적으로 제어할 수 있음.), 애니메이션 그룹(여러 속성 애니메이션을 하나로 결합할 수 있음.) 및 Transition(하위 레이어 추가 및 제거를 포함하여 레이어의 내용에 대한 변경사항을 애니메이션으로 적용하는데 사용할 수 있음.)을 배웠다. 9장에서는 CAMediaTiming 프로토콜을 연구하고 Core Animation이 시간 경과를 어떻게 다루는지 알아볼 것이다.
