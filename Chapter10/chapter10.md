@@ -124,3 +124,86 @@ class ViewController: UIViewController {
 ### The Cubic Bézier Curve
 * CAMediaTimingFunction 함수의 기본 원리는 입력 시간을 시작 값과 끝 값 사이의 비례 변화로 변환한다는 것이다. 이를 x 축에 시간(t), y 축에 (delta)를 변경하여 간단한 그래프로 나타낼 수 있다. 따라서 선형 easing에 대한 그래프는 원점에서 간단한 대각선이다.
 ![](Resource/10_1.png)
+
+* 이 선의 기울기는 변화의 속도를 나타낸다. 사면의 변화는 가속 또는 감속을 나타낸다. 원칙적으로 어떤 종류의 가속도 곡선도 이와 같은 그래프로 나타낼 수 있지만 CAMediaTimingFunction은 특정 함수를 사용한다.(CAKeyframeAnimation 경로를 생성할 때 이 전에 8장의 베이지어 곡선을 사용했다.)
+* 첫 번째 점과 마지막 점은 곡선의 시작점과 끝점을 나타내고 두 개의 중간 점은 커브의 모양을 제어하기 때문에 제어점이라고 한다. 베이지어 곡선의 제어점은 커브가 아닌 커브 점을 통과해야 한다. 이 점들은 자석을 통과할 때 곡선을 끌어 당기는 자석처럼 작용한다고 생각할 수 있다.
+* 아래 그림은 3차 베이지어 Easing 함수의 예를 보여준다.
+![](Resource/10_2.png)
+
+* 실제로는 다소 이상한 기능이 될 것이다. 처음에는 빠르게 진행되고 그다음 느려지고 그 다음에는 속도가 빨라진다. 그렇다면 표준 Easing 함수는 그래프 형태로 표현할 때 어떻게 보일까?
+* CAMediaTimingFunction에는 커브 포인트를 검색하는데 사용할 수 있는 `getControlPointAtIndex` 메서드가 있다. 이 방법의디자인은 다소 기발하다. 하지만 표준적인 Easing 함수의 포인트를 찾아서 UIBezierPath와 CAShapeLayer를 사용하여 그릴 수 있다. 곡선의 시작점과 끝점은 항상 {0, 0}과 {1, 1}에 있으므로 곡선의 두 번째 및 세 번째 점(제어점)만 검색하면 된다. 이를 수행하는 코드는 아래와 같다.
+![](Resource/10_3.png)
+
+```Swift
+struct TimingFuncType {
+    private init() {}
+    
+    static let EaseOut = kCAMediaTimingFunctionEaseOut
+    static let EaseIn = kCAMediaTimingFunctionEaseIn
+    static let EaseIneaseOut = kCAMediaTimingFunctionEaseInEaseOut
+    static let Linear = kCAMediaTimingFunctionLinear
+    static let Default = kCAMediaTimingFunctionDefault
+}
+
+class ViewController: UIViewController {
+    @IBOutlet weak var layerView: UIView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        let function = CAMediaTimingFunction(name: TimingFuncType.EaseIneaseOut)
+        
+        let controlPoint1 = UnsafeMutablePointer<Float>.allocate(capacity: 2)
+        let controlPoint2 = UnsafeMutablePointer<Float>.allocate(capacity: 2)
+        
+        function.getControlPoint(at: 1, values: controlPoint1)
+        function.getControlPoint(at: 2, values: controlPoint2)
+        
+        let path = UIBezierPath()
+        path.move(to: CGPoint.zero)
+        path.addCurve(to: CGPoint(x: 1, y: 1),
+                      controlPoint1: CGPoint(x: CGFloat(controlPoint1[0]), y: CGFloat(controlPoint1[1])),
+                      controlPoint2: CGPoint(x: CGFloat(controlPoint2[0]), y: CGFloat(controlPoint2[1]))
+        )
+        
+        path.apply(CGAffineTransform(scaleX: 200, y: 200))
+        
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.strokeColor = UIColor.red.cgColor
+        shapeLayer.fillColor = UIColor.clear.cgColor
+        shapeLayer.lineWidth = 4.0
+        shapeLayer.path = path.cgPath
+        layerView.layer.addSublayer(shapeLayer)
+        
+        layerView.layer.isGeometryFlipped = true
+    }
+}
+```
+* Custom clock hand easing 함수의 경우 처음에는 얕은 커브, 그다음 가파른 커브를 사용하여 마지막 순간까지 감속시킨다. 약간의 실험을 통해 우리는 다음과 같이 마무리 할 수 있다.
+```Swift
+CAMediaTimingFunction(controlPoints: 1, 0, 0.75, 1)
+```
+* 위의 코드를 통해 만든 함수를 이용하여 그래프로 나타내면 아래와 같은 그림이 나온다. 이는 우리가 원하는 그래프의 모양이다. 이제 시계 프로젝트에 아래와 같은 코드를 추가하자.
+![](Resource/10_4.png)
+
+```Swift
+func setAngle(angle: CGFloat, handView: UIView, animated: Bool) {
+        let transform = CATransform3DMakeRotation(angle, 0, 0, 1)
+        
+        if animated {
+            let animation = CABasicAnimation(keyPath: "transform")
+            animation.fromValue = handView.layer.presentation()?.value(forKey: "transform")
+            animation.toValue = NSValue(caTransform3D: transform)
+            animation.duration = 0.5
+            animation.delegate = self
+            animation.timingFunction = CAMediaTimingFunction(controlPoints: 1, 0, 0.75, 1)
+            
+            handView.layer.transform = transform
+            handView.layer.add(animation, forKey: nil)
+        } else {
+            handView.layer.transform = transform
+        }
+    }
+```
+
+## More Complex Animation Curves
