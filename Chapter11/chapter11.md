@@ -234,3 +234,94 @@ RunLoop.main.add(timer, forMode: .commonModes)
 * 뷰 컨트롤러는 이전처럼 타이머 로직과 함께 cpSpace를 관리한다. 각 단계에서 우리는 cpSpace(물리 계산을 수행하고 전 세계의 모든 몸체를 재배치)를 업데이트 한 다음 bodies를 반복하고 해당 bodies을 모델링 한 bodies와 일치하도록 Crate views의 위치를 업데이트한다.(이 경우 실제로는 하나의 바디만 있지만 나중에 더 추가될 것이다.)
 * Chipmunk는 UIKit에 대해 역 좌표계를 사용한다.(Y 축은 위를 향함) 물리 모델을 뷰와 동기화하여 유지하기 쉽게하기 위해 geomeryFlipped 속성(3장 참조)을 사용하여 컨테이너 뷰의 지오메트리를 반전하므로 모델과 뷰가 모두 동일한 좌표계를 사용한다.
 * Crate 예제 코드는 아래와 같다. 어디에서나 cpSpace 객체를 해제하지는 않는다. 어쨋든 이 간단한 예제에서는 앱 수명기간 동안 공간이 존재하므로 실제 문제는 아니지만 실제 시나리오에서는 Crate 본체와 동일한 방식으로 이를 처리해야 한다. 독립형 Cocoa 객체로 래핑하고 Chipmunk 객체의 수명 주기를 관리하는데 사용한다.
+
+![](Resource/11_1.png)
+```Swift
+class Crate: UIImageView {
+    let MASS: cpFloat = 100
+    
+    var body: UnsafeMutablePointer<cpBody>
+    var shape: UnsafeMutablePointer<cpShape>
+    
+    override init(frame: CGRect) {
+        body = cpBodyNew(MASS, cpMomentForBox(MASS, cpFloat(frame.size.width), cpFloat(frame.size.height)))
+        
+        let corners = [
+            cpv(0, 0),
+            cpv(0, cpFloat(frame.size.height)),
+            cpv(cpFloat(frame.size.width), cpFloat(frame.size.height)),
+            cpv(cpFloat(frame.size.width), 0),
+        ]
+        
+        shape = cpPolyShapeNew(body, Int32(corners.count), UnsafeMutablePointer(mutating: corners), cpv(cpFloat(-frame.size.width) / 2, cpFloat(-frame.size.height) / 2))
+        
+        super.init(frame: frame)
+        
+        image = #imageLiteral(resourceName: "Crate")
+        contentMode = UIViewContentMode.scaleAspectFill
+        
+        cpShapeSetFriction(shape, 0.5)
+        cpShapeSetElasticity(shape, 0.8)
+        
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class ViewController_11_3: UIViewController {
+    @IBOutlet weak var containerView: UIView!
+    
+    let GRAVITY = 1000
+    
+    var space: UnsafeMutablePointer<cpSpace>?
+    var timer: CADisplayLink?
+    var lastStep: CFTimeInterval = 0
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        containerView.layer.isGeometryFlipped = true
+        
+        space = cpSpaceNew()
+        cpSpaceSetGravity(space, cpv(0, -(Float(GRAVITY))))
+        
+        let crate = Crate(frame: CGRect(x: 100, y: 0, width: 100, height: 100))
+        containerView.addSubview(crate)
+        
+        cpSpaceAddBody(space, crate.body)
+        cpSpaceAddShape(space, crate.shape)
+        
+        lastStep = CACurrentMediaTime()
+        timer = CADisplayLink(target: self, selector: #selector(step))
+        timer?.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
+    }
+}
+
+extension ViewController_11_3 {
+    func updateShape(shape: UnsafeMutablePointer<cpShape>?, unused: UnsafeMutableRawPointer?) -> Void {
+        let crate = shape?.pointee.data.assumingMemoryBound(to: Crate.self).pointee
+        let body = shape?.pointee.body
+        crate?.center = cpBodyGetPos(body)
+        crate?.transform = CGAffineTransform(rotationAngle: CGFloat(cpBodyGetAngle(body)))
+    }
+    
+    func step(timer: CADisplayLink) {
+        let thisStep = CACurrentMediaTime()
+        let stepDuration = thisStep - lastStep
+        lastStep = thisStep
+        
+        cpSpaceStep(space, cpFloat(stepDuration))
+        
+        let b: cpSpaceShapeIteratorFunc = { shape, data in
+            let crate = shape?.pointee.data.assumingMemoryBound(to: Crate.self).pointee
+            let body = shape?.pointee.body
+            crate?.center = cpBodyGetPos(body)
+            crate?.transform = CGAffineTransform(rotationAngle: CGFloat(cpBodyGetAngle(body)))
+        }
+        
+        cpSpaceEachShape(space, b, nil)
+    }
+}
+```
