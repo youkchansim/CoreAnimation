@@ -253,3 +253,156 @@ let animation = CAKeyframeAnimation(keyPath: "position")
         shipLayer.add(animation, forKey: nil)
 ```
 ![](Resource/8_2.png)
+
+### Virtual Properties
+* 우리는 이전에 속성 애니메이션을 동작시키기 위해 keys 대신에 key paths를 사용할 수 있다는것에 대하여 언급하였다. 이는 virtual properties와 sub properties을 애니메이션으로 만들 수 있음을 의미한다.
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var layerView: UIView!
+
+    let layer = CALayer()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        layer.frame = CGRect(x: 50, y: 50, width: 100, height: 100)
+        layer.backgroundColor = UIColor.blue.cgColor
+        layer.contents = UIImage(named: "Ship")?.cgImage
+        layerView.layer.addSublayer(layer)
+        
+        let animation = CABasicAnimation(keyPath: "transform")
+        animation.duration = 2.0
+        animation.toValue = NSValue(caTransform3D: CATransform3DMakeRotation(CGFloat(M_PI), 0, 0, 1))
+        layer.add(animation, forKey: nil)
+    }
+}
+```
+* 위의 예제는 이미지를 M_PI(180도) 회전하면서 애니메이션이 적용되지만, M_PI * 2(360도) 회전시키게 되면 애니메이션이 동작하지 않음을 알 수 있다. 그 이유는 fromValue와 toValue가 같기 때문이다(360도 회전 시 행렬이 fromValue 행렬과 같아짐을 알 수 있다.).
+* 각도의 상관없이 선박의 Translation 혹은 Scale 애니메이션을 적용하려면 어떻게 해야할까? 이 두 가지 모두 transform 속성을 수정해야하기 때문에 각각의 시점에서 각 애니메이션의 결합 효과를 다시 계산하고 결합 된 변형 값에서 복잡한 키 프레임 애니메이션을 만들어야 한다.
+* 다행스럽게 레이어를 회전시키기 위해서 keys를 사용하는 대신 key paths를 사용하면 쉽게해결할 수 있다. 즉 transform 속성 자체에 애니메이션을 적용하는 대신 transform.rotation key path에 애니메이션을 적용하는 것이다.
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var layerView: UIView!
+
+    let layer = CALayer()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        layer.frame = CGRect(x: 50, y: 50, width: 100, height: 100)
+        layer.backgroundColor = UIColor.blue.cgColor
+        layer.contents = UIImage(named: "Ship")?.cgImage
+        layerView.layer.addSublayer(layer)
+        
+        let animation = CABasicAnimation(keyPath: "transform")
+        animation.duration = 2.0
+        animation.toValue = M_PI * 2
+        layer.add(animation, forKey: nil)
+    }
+}
+```
+* 앞서 동작에선 M_PI * 2는 애니메이션이 적용되지 않았지만 위의 예제는 정상적으로 동작함을 알 수 있다.
+* 그렇다면 key paths를 사용하여 애니메이팅하는 것의 이점은 무엇이 있을까?
+  * keyframes을 사용하지 않고 한 번에 180도 이상 회전할 수 있다.
+  * 절대 회전이 아닌 상대 회전을 수행할 수 있다.(byValue 대신에 toValue)
+  * CATransform3D 대신 간단한 숫자 값으로 각도를 지정할 수 있다.
+  * transform.position 또는 transform.scale(key paths를 사용하여 개별적으로 애니메이션 가능하다.)과 충돌하지 않는다.
+
+* 이번장은 Virtual Property인데 이상한점을 느끼지 못했는가? 바로 transform.rotation 속성은 실제로 존재하지 않는다는 것이다! CATransform3D는 객체가 아니기 때문에 존재할 수 없다(오호~). 또한 구조체 이므로 KVC 호환 속성을 가질 수 없다. transform.rotation은 실제로 CALayer가 transforms 애니메이션 처리 과정을 단순화하기 위해 제공하는 가상 속성이다.
+* 짚고넘어가야할 것은 transform.rotation이나 transform.scale과 같은 속성을 직접 설정할 수 없다는 것이다. 애니메이션에서만 사용할 수 있다. 이러한 속성을 애니메이션화하면 Core Animation은 CAValueFunction이라는 클래스를 사용하여 변경 사항이 필요로 하는 실제 값으로 transform 속성을 자동으로 업데이트한다.
+* CAValueFunction은 자연스럽게 합치거나 보간할 수 없는 속성을 애니메이션화 하는데 유용한 매커니즘이 될 수 있지만 CAValueFunction의 구현 세부 정보는 비공개이므로 새로운 값을 만들기 위해 하위 클래스로는 현재 사용할 수 없다. Apple이 이미 상수로 정한 함수만 사용할 수 있다.
+
+### Animation Groups
+* CABasicAnimation과 CAKeyframeAnimation은 개별 속성 대상으로 하지만 CAAnimationGroup을 사용하여 이러한 애니메이션을 여러개로 모을 수 있다.
+* CAAnimationGroup는 CAAnimation의 또 다른 하위 클래스로 애니메이션 배열 속성을 추가하여 다른 애니메이션을 그룹화하는 데 사용된다.
+* Animation group을 레이어에 추가하는 것은 애니메이션을 개별적으로 추가하는 것과는 근본적으로 다르므로 Animation group을 사용할 시기 또는 이유를 즉시 알 수 없다. 그룹내의 애니메이션 지속시간을 설정하거나 하나의 명령으로 레이어에서 여러 애니메이션을 추가 및 제거할 수 있는 편의성을 제공하지만 실질적인 유용성은 9장의 계층적인 타이밍 관련해서 명백해진다.
+![](Resource/8_3.png)
+```Swift
+class ViewController: UIViewController {
+    override func viewDidLoad() {
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 0, y: 75))
+        path.addCurve(to: CGPoint(x: 300, y: 75), controlPoint1: CGPoint(x: 75, y: 0), controlPoint2: CGPoint(x: 225, y: 150))
+        
+        let pathLayer = CAShapeLayer()
+        pathLayer.path = path.cgPath
+        pathLayer.fillColor = UIColor.clear.cgColor
+        pathLayer.strokeColor = UIColor.red.cgColor
+        pathLayer.lineWidth = 3.0
+        bezierCurveView.layer.addSublayer(pathLayer)
+        
+        let shipLayer = CALayer()
+        shipLayer.frame = CGRect(x: 0, y: 0, width: 64, height: 64)
+        shipLayer.position = CGPoint(x: 0, y: 75)
+        shipLayer.backgroundColor = UIColor.green.cgColor
+        bezierCurveView.layer.addSublayer(shipLayer)
+        
+        let animation1 = CAKeyframeAnimation(keyPath: "position")
+        animation1.duration = 4.0
+        animation1.path = path.cgPath
+        animation1.rotationMode = kCAAnimationRotateAuto
+        
+        let animation2 = CABasicAnimation(keyPath: "backgroundColor")
+        animation2.toValue = UIColor.red.cgColor
+        
+        let animationGroup = CAAnimationGroup()
+        animationGroup.animations = [animation1, animation2]
+        animationGroup.duration = 4
+        
+        shipLayer.add(animationGroup, forKey: nil)
+    }
+}
+```
+
+### Transitions
+* 때로는 iOS 응용 프로그램의 속성 애니메이션을 사용하여 애니메이션을 적용하기가 매우 어려운 레이아웃을 변경해야할 수도 있다. 예를들어 텍스트나 이미지를 바꿔야하거나 등등의 일 말이다.
+* 속성 애니메이션은 레이어에 가능한 속성에서만 작동하므로 애니메이션이 불가능한 속성(예를들어 이미지)을 변경하거나 계층에서 레이어를 실제로 추가하거나 제거해야하는 경우 속성 애니메이션이 작동하지 않는다.
+* Transition animation은 속성 애니메이션과 같이 두 값 사이를 부드럽게 보간하려고 하지 않는다.
+* Transition은 특정 속성 대신 전체 레이어에 영향을 준다. Transition은 이전 레이어 모양의 스냅샷을 찍은 다음 단일 모양의 새로운 모양으로 애니메이션을 적용한다.
+* Transition을 만들려면 CAAnimation의 다른 하위 클래스인 CATransition을 사용해야한다. CAAnimation에서 상속받은 모든 타이밍 함수 외에도 CATransition에는 전환 효과를 지정하는데 사용되는 유형 및 하위 유형이 있다. Type은 NSString이며 다음 상수값 중 하나를 설정할 수 있다.
+  * kCATransitionFade 
+  * kCATransitionMoveIn
+  * kCATransitionPush
+  * kCATransitionReveal
+
+* 현재 위의 4가지 기본 CATransition 유형으로 제한되어 있지만 이 장의 뒷부분에서 설명하는대로 추가 전환효과를 얻을 수 있는 몇가지 방법이 있다.
+* 기본 전환 유형은 kCATransitionFade이다. 이전 레이어 모양과 속성 또는 내용을 수정한 후 새 모양 사이에 부드러운 교차 페이드를 만든다. 7장의 사용자 정의 액션 예제에서 kCATransitionPush 유형을 사용했다.
+* kCATransitionMoveIn 및 kCATransitionReveal은 kCATransitionPush와 유사하다. 이 두개는 방향 스와이프 애니메이션을 구현하지만 미묘한 차이점을 갖고있다.
+* kCATransitionMoveIn은 이전 레이어의 맨 위에 새 레이어 모양을 이동시킨 후 이전 레어어를 사라지게 하지만 push transition 처럼 이전 레이어를 측면으로 push 하지 않으며 kCATransitionReveal은 이전 레이어 위에 새로운 레이어가 생성되며 이전 레이어를 이동시킨 후 사라지게한다. 즉 MoveIn은 새로운 레이어만 이동하고, Reveal은 이전 레이어만 이동한다.(Push는 새로운 레이어와 이전 레이어 모두 이동이 일어난다.)
+* kCATransitionReveal의 경우 기본적으로 왼쪽 슬라이드 되지만 다음 상수 중 하나를 선택하여 방향을 변경할 수 있다.
+  * kCATransitionFromRight
+  * kCATransitionFromLeft
+  * kCATransitionFromTop
+  * kCATransitionFromBottom
+
+* 예제를 해볼 시간이다.
+![](Resource/8_4.png)
+```Swift
+class ViewController: UIViewController {
+    @IBOutlet weak var imageView: UIImageView!
+    @IBAction func switchImageBtnAction(_ sender: Any) {
+        let transition = CATransition()
+        transition.type = kCATransitionFade
+        
+        imageView.layer.add(transition, forKey: nil)
+        
+        if let currentImage = imageView.image {
+            var index = images.index(of: currentImage) ?? 0
+            index = (index + 1) % images.count
+            imageView.image = images[index]
+        }
+    }
+
+    var images: [UIImage] = []
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        images = [
+            UIImage(named: "Anchor")!,
+            UIImage(named: "Cone")!,
+            UIImage(named: "Igloo")!,
+            UIImage(named: "Spaceship")!,
+        ]
+    }
+}
+```
+* 코드에서 볼 수 있듯이 add(transition, forKey: nil) 메소드를 사용하여 속성 또는 그룹 애니메이션과 같은 방식으로 레이어에 추가된다. 그러나 속성 애니메이션과 달리 한번에 하나의 CATransition만 주어진 레이어에서 작동할 수 있다. 이러한 이유 때문에 key에 대해 지정하는 값에 관계없이 Transition은 실제로 상수 kCATransition으로 표시되는 "Transition"키와 연결된다.
